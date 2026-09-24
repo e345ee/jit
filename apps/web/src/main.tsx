@@ -104,12 +104,35 @@ function App() {
   const [view, setView] = useState<View>('routes');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
+  const [connectionDialogDismissed, setConnectionDialogDismissed] = useState(false);
   const [reminderState, setReminderState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  useEffect(() => {
+    function handleOnline() {
+      setIsOnline(true);
+      setReloadKey((value) => value + 1);
+    }
+
+    function handleOffline() {
+      setIsOnline(false);
+      setConnectionDialogDismissed(false);
+    }
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setConnectionDialogDismissed(false);
     Promise.all([loadSituations(query), loadKnowledge()])
       .then(([nextSituations, nextKnowledge]) => {
         if (cancelled) return;
@@ -130,7 +153,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [query]);
+  }, [query, reloadKey]);
 
   const selected = useMemo(
     () => situations.find((item) => item.id === selectedId) ?? situations[0] ?? null,
@@ -179,6 +202,18 @@ function App() {
   }
 
   const sourceTarget = selectedKnowledge ?? selected;
+  const connectionIssue = !isOnline
+    ? {
+        title: 'Нет связи с интернетом',
+        text: 'Справочник уже открыт, но новые данные и напоминания могут быть недоступны. Проверьте подключение и повторите загрузку.'
+      }
+    : error
+      ? {
+          title: 'Не удалось загрузить данные',
+          text: 'Сервер справочника сейчас недоступен или соединение прервалось. Можно повторить попытку через несколько секунд.'
+        }
+      : null;
+  const showConnectionDialog = Boolean(connectionIssue && !connectionDialogDismissed);
 
   return (
     <main className="appShell">
@@ -471,6 +506,34 @@ function App() {
           {reminderState === 'saving' && 'Создаем напоминание...'}
           {reminderState === 'saved' && 'Напоминание создано.'}
           {reminderState === 'error' && 'Не удалось создать напоминание. Маршрут можно продолжить.'}
+        </div>
+      )}
+
+      {showConnectionDialog && connectionIssue && (
+        <div className="modalBackdrop" role="presentation">
+          <section className="connectionDialog" role="alertdialog" aria-modal="true" aria-labelledby="connection-title">
+            <div className="dialogIcon">
+              <AlertCircle size={22} />
+            </div>
+            <div>
+              <h2 id="connection-title">{connectionIssue.title}</h2>
+              <p>{connectionIssue.text}</p>
+            </div>
+            <div className="dialogActions">
+              <button
+                type="button"
+                onClick={() => {
+                  setConnectionDialogDismissed(false);
+                  setReloadKey((value) => value + 1);
+                }}
+              >
+                Повторить
+              </button>
+              <button type="button" className="secondary" onClick={() => setConnectionDialogDismissed(true)}>
+                Закрыть
+              </button>
+            </div>
+          </section>
         </div>
       )}
 
