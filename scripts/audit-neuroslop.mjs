@@ -1,7 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-const ignoredDirs = new Set(['.git', 'node_modules', 'dist', 'coverage']);
+const ignoredDirs = new Set(['.git', 'node_modules', 'dist', 'coverage', 'jit']);
 const extensions = new Set(['.md', '.json', '.ts', '.tsx', '.js', '.mjs', '.css', '.yaml', '.yml']);
 
 const banned = [

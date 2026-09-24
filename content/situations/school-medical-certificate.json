@@ -55,7 +55,7 @@
   "knowledgeLinks": ["school-medical-certificate", "child-medical-documents", "vaccination-certificate"],
   "sources": [
     {
-      "title": "Модельная памятка для школы и секции для MVP",
+      "title": "Памятка для школы и секции",
       "type": "synthetic",
       "actualOn": "2026-09-23"
     }

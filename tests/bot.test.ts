@@ -91,6 +91,40 @@ describe('max bot webhook', () => {
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(String(fetchMock.mock.calls[0][0])).toContain('/messages?chat_id=123');
     expect(fetchMock.mock.calls[0][1]?.body).toContain('Открыть навигатор');
+    expect(fetchMock.mock.calls[0][1]?.body).not.toContain('open_app');
+    await app.close();
+  });
+
+  it('replies to private dialog updates using sender user id', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ ok: true })
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { buildServer } = await loadBotServer({
+      MAX_BOT_TOKEN: 'token',
+      MAX_WEBHOOK_SECRET: 'secret',
+      MINI_APP_PUBLIC_URL: 'https://navigator.example.test'
+    });
+    const app = buildServer();
+    const response = await app.inject({
+      method: 'POST',
+      url: '/webhook',
+      headers: { 'x-max-bot-api-secret': 'secret' },
+      payload: {
+        update_type: 'message_created',
+        message: {
+          sender: { user_id: 456, name: 'User' },
+          recipient: { user_id: 999, chat_type: 'dialog' },
+          body: { text: '/start', mid: 'private-mid' }
+        }
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/messages?user_id=456');
     await app.close();
   });
 });

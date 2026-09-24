@@ -11,7 +11,7 @@
   "sourceIds": ["demo-rehab-route"],
   "sources": [
     {
-      "title": "Модельная памятка по реабилитации для MVP",
+      "title": "Памятка по реабилитации",
       "type": "synthetic",
       "actualOn": "2026-09-23"
     }

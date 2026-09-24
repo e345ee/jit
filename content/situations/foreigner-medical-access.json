@@ -55,7 +55,7 @@
   "knowledgeLinks": ["foreigner-medical-policy", "emergency-vs-planned-care", "personal-data-medical"],
   "sources": [
     {
-      "title": "Модельная памятка университета для иностранных студентов для MVP",
+      "title": "Памятка университета для иностранных студентов",
       "type": "synthetic",
       "actualOn": "2026-09-23"
     },

@@ -20,6 +20,7 @@ import type { KnowledgeCard, SituationCard, SituationStep } from './types';
 import './styles.css';
 
 type Answers = Record<string, string>;
+type View = 'routes' | 'route' | 'knowledge' | 'details';
 
 const categories = [
   { label: 'Документы', query: 'документ' },
@@ -49,18 +50,12 @@ const categoryLabels: Record<string, string> = {
   migration: 'Переезд и адаптация'
 };
 
-const statusLabels: Record<string, string> = {
-  official: 'Официальные данные',
-  clinic: 'Правила организации',
-  synthetic: 'Демо-данные'
-};
-
 const sourceTypeLabels: Record<string, string> = {
   official: 'официальный источник',
   clinic: 'клиника',
   law: 'правовой акт',
   faq: 'памятка',
-  synthetic: 'демо'
+  synthetic: 'справочный материал'
 };
 
 function useChecklist(situationId?: string) {
@@ -106,6 +101,7 @@ function App() {
   const [selectedStep, setSelectedStep] = useState<SituationStep | null>(null);
   const [selectedKnowledge, setSelectedKnowledge] = useState<KnowledgeCard | null>(null);
   const [answers, setAnswers] = useState<Answers>({});
+  const [view, setView] = useState<View>('routes');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reminderState, setReminderState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -119,9 +115,10 @@ function App() {
         if (cancelled) return;
         setSituations(nextSituations);
         setKnowledge(nextKnowledge);
-        if (!selectedId && nextSituations[0]) {
-          setSelectedId(nextSituations[0].id);
-        }
+        setSelectedId((current) => {
+          if (current && nextSituations.some((item) => item.id === current)) return current;
+          return nextSituations[0]?.id ?? null;
+        });
       })
       .catch(() => {
         if (!cancelled) setError('Не удалось загрузить справочник. Проверьте API или попробуйте позже.');
@@ -133,7 +130,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [query, selectedId]);
+  }, [query]);
 
   const selected = useMemo(
     () => situations.find((item) => item.id === selectedId) ?? situations[0] ?? null,
@@ -173,7 +170,7 @@ function App() {
         situationId: selected.id,
         stepId: step.id,
         remindAt,
-        text: `Напоминание: проверьте срок документа для шага "${step.title}".`
+        text: 'Пора вернуться к сохраненному шагу маршрута.'
       });
       setReminderState('saved');
     } catch {
@@ -181,9 +178,11 @@ function App() {
     }
   }
 
+  const sourceTarget = selectedKnowledge ?? selected;
+
   return (
     <main className="appShell">
-      <section className="sidebar" id="search" aria-label="Поиск и категории">
+      <section className="appTop" aria-label="Поиск и навигация">
         <div className="brand">
           <div className="logoMark">
             <HeartPulse size={23} />
@@ -202,6 +201,8 @@ function App() {
               setQuery(event.target.value);
               setSelectedId(null);
               setSelectedKnowledge(null);
+              setSelectedStep(null);
+              setView('routes');
             }}
             placeholder="Документ, справка или ситуация"
           />
@@ -217,6 +218,8 @@ function App() {
                 setQuery(category.query);
                 setSelectedId(null);
                 setSelectedKnowledge(null);
+                setSelectedStep(null);
+                setView('routes');
               }}
             >
               {category.label}
@@ -224,20 +227,41 @@ function App() {
           ))}
         </div>
 
-        <div className="channelCard">
-          <MessageCircle size={19} />
-          <div>
-            <strong>Через MAX-бота</strong>
-            <span>Напишите: полис, СНИЛС, больничный, вычет, МСЭ или госпитализация. Бот найдет маршрут или справку.</span>
-          </div>
+        <div className="pageTabs" aria-label="Разделы">
+          <button className={view === 'routes' ? 'selected' : ''} type="button" onClick={() => setView('routes')}>
+            <ListChecks size={16} />
+            Маршруты
+          </button>
+          <button className={view === 'route' ? 'selected' : ''} type="button" onClick={() => setView('route')}>
+            <ClipboardList size={16} />
+            Карточка
+          </button>
+          <button className={view === 'knowledge' ? 'selected' : ''} type="button" onClick={() => setView('knowledge')}>
+            <BookOpen size={16} />
+            Справочник
+          </button>
+          <button className={view === 'details' ? 'selected' : ''} type="button" onClick={() => setView('details')}>
+            <FileText size={16} />
+            Детали
+          </button>
         </div>
+      </section>
 
-        <div className="resultList">
+      {view === 'routes' && (
+        <section className="pagePanel" aria-label="Маршруты">
+          <div className="channelCard">
+            <MessageCircle size={19} />
+            <div>
+              <strong>Через MAX-бота</strong>
+              <span>Напишите: полис, СНИЛС, больничный, вычет, МСЭ или госпитализация. Бот найдет маршрут или справку.</span>
+            </div>
+          </div>
+
           <div className="sectionTitle">Ситуации</div>
           {loading && <p className="muted">Загружаем справочник...</p>}
           {error && <p className="errorText">{error}</p>}
           {!loading && !error && situations.length === 0 && (
-            <p className="muted">Маршрут не найден. Ниже есть справочные материалы по документам, полису, СНИЛС и вычетам.</p>
+            <p className="muted">Маршрут не найден. Посмотрите справочник по документам, полису, СНИЛС и вычетам.</p>
           )}
           {situations.map((item) => (
             <button
@@ -248,15 +272,116 @@ function App() {
                 setSelectedId(item.id);
                 setSelectedStep(null);
                 setSelectedKnowledge(null);
+                setView('route');
               }}
             >
               <span>{item.title}</span>
               <ChevronRight size={16} />
             </button>
           ))}
-        </div>
+        </section>
+      )}
 
-        <div className="knowledgeList">
+      {view === 'route' && (
+        <section className="pagePanel" aria-label="Карточка маршрута">
+          {!selected ? (
+            <div className="emptyState">
+              <AlertCircle size={28} />
+              <h1>Выберите ситуацию</h1>
+              <p>Справочник покажет шаги, сроки и частые ошибки.</p>
+            </div>
+          ) : (
+            <>
+              <header className="cardHeader">
+                <div>
+                  <span className="eyebrow">{categoryLabels[selected.category] ?? selected.category} · {selected.region}</span>
+                  <h1>{selected.title}</h1>
+                  <p>{selected.shortDescription}</p>
+                  <div className="routeMeta">
+                    <span>{visibleSteps.length} шагов</span>
+                    <span>Чек-лист</span>
+                    <span>{selected.sources.length} источника</span>
+                  </div>
+                </div>
+                <div className="headerActions" aria-label="Прогресс маршрута">
+                  <div className="progressBadge">
+                    <ClipboardList size={18} />
+                    {completed}/{visibleSteps.length}
+                  </div>
+                </div>
+              </header>
+
+              <div className="notice">
+                <ShieldCheck size={18} />
+                <span>{selected.disclaimer}</span>
+              </div>
+
+              <div className="questions">
+                {selected.decisionQuestions.map((question) => (
+                  <fieldset key={question.id}>
+                    <legend>{question.text}</legend>
+                    <div className="segments">
+                      {question.options.map((option) => (
+                        <button
+                          className={answers[question.id] === option.value ? 'selected' : ''}
+                          key={option.value}
+                          type="button"
+                          onClick={() => setAnswers((current) => ({ ...current, [question.id]: option.value }))}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                    {question.options.find((option) => option.value === answers[question.id])?.note && (
+                      <p className="hint">{question.options.find((option) => option.value === answers[question.id])?.note}</p>
+                    )}
+                  </fieldset>
+                ))}
+              </div>
+
+              <div className="stepList">
+                <div className="sectionTitle">Что подготовить</div>
+                {visibleSteps.map((step) => (
+                  <article className="stepRow" key={step.id}>
+                    <button
+                      className={`checkButton ${checklist.checked[step.id] ? 'done' : ''}`}
+                      type="button"
+                      aria-label={checklist.checked[step.id] ? 'Снять отметку' : 'Отметить шаг'}
+                      onClick={() => checklist.toggle(step.id)}
+                    >
+                      {checklist.checked[step.id] && <Check size={17} />}
+                    </button>
+                    <button
+                      className="stepBody"
+                      type="button"
+                      onClick={() => {
+                        setSelectedStep(step);
+                        setSelectedKnowledge(null);
+                        setView('details');
+                      }}
+                    >
+                      <strong>{step.title}</strong>
+                      <span>{step.summary}</span>
+                    </button>
+                    <button className="iconButton" type="button" aria-label="Напомнить" onClick={() => scheduleReminder(step)}>
+                      <Bell size={17} />
+                    </button>
+                  </article>
+                ))}
+              </div>
+
+              <footer className="metaFooter">
+                <button type="button" onClick={checklist.reset}>Сбросить чек-лист</button>
+                <span>Актуально: {selected.actualOn}</span>
+                <button type="button" onClick={() => setView('details')}>Источники</button>
+              </footer>
+            </>
+          )}
+        </section>
+      )}
+
+      {view === 'knowledge' && (
+        <section className="pagePanel" aria-label="Справочные материалы">
           <div className="sectionTitle">Справочные материалы</div>
           {visibleKnowledge.map((card) => (
             <button
@@ -266,6 +391,7 @@ function App() {
               onClick={() => {
                 setSelectedKnowledge(card);
                 setSelectedStep(null);
+                setView('details');
               }}
             >
               <BookOpen size={15} />
@@ -275,185 +401,92 @@ function App() {
               </div>
             </button>
           ))}
-        </div>
-      </section>
+        </section>
+      )}
 
-      <section className="contentPanel" id="route" aria-label="Карточка справочника">
-        {!selected ? (
-          <div className="emptyState">
-            <AlertCircle size={28} />
-            <h1>Выберите ситуацию</h1>
-            <p>Справочник покажет шаги, сроки и частые ошибки.</p>
-          </div>
-        ) : (
-          <>
-            <header className="cardHeader">
-              <div>
-                <span className="eyebrow">{categoryLabels[selected.category] ?? selected.category} · {selected.region}</span>
-                <h1>{selected.title}</h1>
-                <p>{selected.shortDescription}</p>
-                <div className="routeMeta">
-                  <span>{visibleSteps.length} шагов</span>
-                  <span>Локальный чек-лист</span>
-                  <span>{selected.sources.length} источника</span>
+      {view === 'details' && (
+        <aside className="pagePanel detailPanel" aria-label="Детали">
+          {selectedStep ? (
+            <>
+              <span className="eyebrow">Детали шага</span>
+              <h2>{selectedStep.title}</h2>
+              <p>{selectedStep.why}</p>
+              {selectedStep.validFor && (
+                <div className="detailBlock">
+                  <CalendarClock size={17} />
+                  <span>{selectedStep.validFor}</span>
                 </div>
+              )}
+              <h3>Где получить</h3>
+              <ul>
+                {selectedStep.whereToGet.map((item) => <li key={item}>{item}</li>)}
+              </ul>
+              <h3>Частые ошибки</h3>
+              <ul>
+                {selectedStep.commonMistakes.map((item) => <li key={item}>{item}</li>)}
+              </ul>
+            </>
+          ) : selectedKnowledge ? (
+            <>
+              <span className="eyebrow">Справка · {selectedKnowledge.actualOn}</span>
+              <h2>{selectedKnowledge.title}</h2>
+              <p>{selectedKnowledge.summary}</p>
+              <div className="knowledgeBody">
+                {selectedKnowledge.body.map((item) => (
+                  <article key={item}>
+                    <FileText size={16} />
+                    <span>{item}</span>
+                  </article>
+                ))}
               </div>
-              <div className="headerActions" aria-label="Статус маршрута">
-                <div className="progressBadge">
-                  <ClipboardList size={18} />
-                  {completed}/{visibleSteps.length}
-                </div>
-                <div className="sourceBadge">
-                  <FileText size={17} />
-                  {statusLabels[selected.dataStatus] ?? selected.dataStatus}
-                </div>
-              </div>
-            </header>
-
-            <div className="notice">
-              <ShieldCheck size={18} />
-              <span>{selected.disclaimer}</span>
+            </>
+          ) : (
+            <div className="emptyState small">
+              <BookOpen size={24} />
+              <h2>Откройте шаг или справку</h2>
+              <p>Здесь появятся объяснения, источники, сроки и частые ошибки без медицинских назначений.</p>
             </div>
+          )}
 
-            <div className="questions">
-              {selected.decisionQuestions.map((question) => (
-                <fieldset key={question.id}>
-                  <legend>{question.text}</legend>
-                  <div className="segments">
-                    {question.options.map((option) => (
-                      <button
-                        className={answers[question.id] === option.value ? 'selected' : ''}
-                        key={option.value}
-                        type="button"
-                        onClick={() => setAnswers((current) => ({ ...current, [question.id]: option.value }))}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                  {question.options.find((option) => option.value === answers[question.id])?.note && (
-                    <p className="hint">{question.options.find((option) => option.value === answers[question.id])?.note}</p>
+          {sourceTarget && (
+            <div className="sourcePanel">
+              <div className="sectionTitle">Где прочитать подробнее</div>
+              {(selectedKnowledge?.sources ?? selected?.sources ?? []).map((source) => (
+                <article key={`${source.title}-${source.actualOn}`}>
+                  {source.url ? (
+                    <a href={source.url} target="_blank" rel="noreferrer">{source.title}</a>
+                  ) : (
+                    <strong>{source.title}</strong>
                   )}
-                </fieldset>
-              ))}
-            </div>
-
-            <div className="stepList">
-              <div className="sectionTitle">Что подготовить</div>
-              {visibleSteps.map((step) => (
-                <article className="stepRow" key={step.id}>
-                  <button
-                    className={`checkButton ${checklist.checked[step.id] ? 'done' : ''}`}
-                    type="button"
-                    aria-label={checklist.checked[step.id] ? 'Снять отметку' : 'Отметить шаг'}
-                    onClick={() => checklist.toggle(step.id)}
-                  >
-                    {checklist.checked[step.id] && <Check size={17} />}
-                  </button>
-                  <button
-                    className="stepBody"
-                    type="button"
-                    onClick={() => {
-                      setSelectedStep(step);
-                      setSelectedKnowledge(null);
-                    }}
-                  >
-                    <strong>{step.title}</strong>
-                    <span>{step.summary}</span>
-                  </button>
-                  <button className="iconButton" type="button" aria-label="Напомнить" onClick={() => scheduleReminder(step)}>
-                    <Bell size={17} />
-                  </button>
+                  <span>{sourceTypeLabels[source.type] ?? source.type} · {source.actualOn}</span>
                 </article>
               ))}
             </div>
+          )}
+        </aside>
+      )}
 
-            <footer className="metaFooter">
-              <button type="button" onClick={checklist.reset}>Сбросить чек-лист</button>
-              <span>Актуально: {selected.actualOn}</span>
-              <span>Источников: {selected.sources.length}</span>
-            </footer>
-
-            {reminderState !== 'idle' && (
-              <div className={`toast ${reminderState}`}>
-                {reminderState === 'saving' && 'Создаем напоминание...'}
-                {reminderState === 'saved' && 'Напоминание создано без диагноза и медицинских данных.'}
-                {reminderState === 'error' && 'Не удалось создать напоминание. Основной сценарий можно продолжить.'}
-              </div>
-            )}
-          </>
-        )}
-      </section>
-
-      <aside className="detailPanel" id="details" aria-label="Детали шага">
-        {selectedStep ? (
-          <>
-            <span className="eyebrow">Детали шага</span>
-            <h2>{selectedStep.title}</h2>
-            <p>{selectedStep.why}</p>
-            {selectedStep.validFor && (
-              <div className="detailBlock">
-                <CalendarClock size={17} />
-                <span>{selectedStep.validFor}</span>
-              </div>
-            )}
-            <h3>Где получить</h3>
-            <ul>
-              {selectedStep.whereToGet.map((item) => <li key={item}>{item}</li>)}
-            </ul>
-            <h3>Частые ошибки</h3>
-            <ul>
-              {selectedStep.commonMistakes.map((item) => <li key={item}>{item}</li>)}
-            </ul>
-          </>
-        ) : selectedKnowledge ? (
-          <>
-            <span className="eyebrow">{statusLabels[selectedKnowledge.dataStatus] ?? selectedKnowledge.dataStatus} · {selectedKnowledge.actualOn}</span>
-            <h2>{selectedKnowledge.title}</h2>
-            <p>{selectedKnowledge.summary}</p>
-            <div className="knowledgeBody">
-              {selectedKnowledge.body.map((item) => (
-                <article key={item}>
-                  <FileText size={16} />
-                  <span>{item}</span>
-                </article>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div className="emptyState small">
-            <BookOpen size={24} />
-            <h2>Откройте шаг или справку</h2>
-            <p>Здесь появятся объяснения, источники, сроки и частые ошибки без медицинских назначений.</p>
-          </div>
-        )}
-
-        {(selectedKnowledge ?? selected) && (
-          <div className="sourcePanel">
-            <div className="sectionTitle">Источники</div>
-            {(selectedKnowledge?.sources ?? selected?.sources ?? []).map((source) => (
-              <article key={`${source.title}-${source.actualOn}`}>
-                <strong>{source.title}</strong>
-                <span>{sourceTypeLabels[source.type] ?? source.type} · {source.actualOn}</span>
-              </article>
-            ))}
-          </div>
-        )}
-      </aside>
+      {reminderState !== 'idle' && (
+        <div className={`toast ${reminderState}`}>
+          {reminderState === 'saving' && 'Создаем напоминание...'}
+          {reminderState === 'saved' && 'Напоминание создано.'}
+          {reminderState === 'error' && 'Не удалось создать напоминание. Маршрут можно продолжить.'}
+        </div>
+      )}
 
       <nav className="bottomNav" aria-label="Основная навигация">
-        <a href="#search">
+        <button className={view === 'routes' ? 'selected' : ''} type="button" onClick={() => setView('routes')}>
           <Search size={18} />
           <span>Поиск</span>
-        </a>
-        <a href="#route">
+        </button>
+        <button className={view === 'route' ? 'selected' : ''} type="button" onClick={() => setView('route')}>
           <ListChecks size={18} />
           <span>Маршрут</span>
-        </a>
-        <a href="#details">
+        </button>
+        <button className={view === 'knowledge' || view === 'details' ? 'selected' : ''} type="button" onClick={() => setView('knowledge')}>
           <BookOpen size={18} />
-          <span>Детали</span>
-        </a>
+          <span>Справки</span>
+        </button>
       </nav>
     </main>
   );

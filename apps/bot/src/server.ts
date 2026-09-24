@@ -50,20 +50,23 @@ function validateStartupConfig() {
   }
 }
 
-function rememberUpdate(key: string) {
+function pruneSeenUpdates() {
   const now = Date.now();
   for (const [seenKey, seenAt] of seenUpdates) {
     if (now - seenAt > dedupTtlMs) {
       seenUpdates.delete(seenKey);
     }
   }
+}
 
-  if (seenUpdates.has(key)) {
-    return false;
-  }
+function hasSeenUpdate(key: string) {
+  pruneSeenUpdates();
+  return seenUpdates.has(key);
+}
 
-  seenUpdates.set(key, now);
-  return true;
+function rememberUpdate(key: string) {
+  pruneSeenUpdates();
+  seenUpdates.set(key, Date.now());
 }
 
 function publicError(error: unknown) {
@@ -97,7 +100,7 @@ export function buildServer() {
   });
 
   app.setErrorHandler((error, request, reply) => {
-    request.log.warn({ error }, 'bot request failed');
+    request.log.warn({ err: error }, 'bot request failed');
     if (error instanceof z.ZodError) {
       reply.code(400).send({ error: 'validation_error', issues: error.issues });
       return;
@@ -135,13 +138,14 @@ export function buildServer() {
 
     const update = maxUpdateSchema.parse(request.body);
     const dedupKey = getUpdateDedupKey(update);
-    if (!rememberUpdate(dedupKey)) {
+    if (hasSeenUpdate(dedupKey)) {
       request.log.info({ dedupKey }, 'duplicate webhook update ignored');
       return { ok: true, duplicate: true };
     }
 
     if (!max) {
       request.log.warn('MAX_BOT_TOKEN is not configured; update accepted but no reply sent');
+      rememberUpdate(dedupKey);
       return { ok: true, skipped: 'missing_token' };
     }
 
@@ -149,6 +153,15 @@ export function buildServer() {
     if (!target.chatId && !target.userId) {
       return reply.code(400).send({ error: 'chat_or_user_id_required' });
     }
+    request.log.info(
+      {
+        updateType: update.update_type,
+        dedupKey,
+        targetType: target.chatId ? 'chat' : 'user',
+        hasMessageText: Boolean(getMessageText(update))
+      },
+      'webhook update parsed'
+    );
 
     if (shouldWelcome(update)) {
       await max.sendMessage({
@@ -164,6 +177,7 @@ export function buildServer() {
           'Я не ставлю диагнозы и не заменяю врача.'
         ].join('\n')
       });
+      rememberUpdate(dedupKey);
       return { ok: true };
     }
 
@@ -176,6 +190,7 @@ export function buildServer() {
       });
     }
 
+    rememberUpdate(dedupKey);
     return { ok: true };
   });
 

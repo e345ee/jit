@@ -44,15 +44,8 @@ export class MaxClient {
                 buttons: [
                   [
                     {
-                      type: 'open_app',
-                      text: 'Открыть навигатор',
-                      web_app: options.miniAppUrl
-                    }
-                  ],
-                  [
-                    {
                       type: 'link',
-                      text: 'Открыть по ссылке',
+                      text: 'Открыть навигатор',
                       url: options.miniAppUrl
                     }
                   ]
@@ -86,4 +79,3 @@ export class MaxClient {
     };
   }
 }
-

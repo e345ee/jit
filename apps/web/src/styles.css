@@ -61,21 +61,23 @@ a:focus-visible {
   padding-bottom: calc(88px + env(safe-area-inset-bottom));
 }
 
-.sidebar,
-.contentPanel,
-.detailPanel {
+.appTop,
+.pagePanel {
   padding: 16px;
   scroll-margin-top: 12px;
 }
 
-.sidebar {
+.appTop {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   border-bottom: 1px solid var(--line);
   background: var(--canvas);
 }
 
-.contentPanel,
-.detailPanel {
-  padding-top: 10px;
+.pagePanel {
+  min-height: calc(100dvh - 250px);
+  padding-top: 14px;
   scroll-margin-bottom: 112px;
 }
 
@@ -164,6 +166,7 @@ a:focus-visible {
 }
 
 .categoryGrid button,
+.pageTabs button,
 .segments button,
 .metaFooter button {
   min-height: 40px;
@@ -178,12 +181,32 @@ a:focus-visible {
 
 .categoryGrid button.active,
 .categoryGrid button:hover,
+.pageTabs button.selected,
+.pageTabs button:hover,
 .segments button.selected,
 .segments button:hover,
 .metaFooter button:hover {
   border-color: var(--blue);
   background: var(--blue-soft);
   color: var(--ink);
+}
+
+.pageTabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.pageTabs button {
+  display: grid;
+  place-items: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px 4px;
+  white-space: normal;
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .channelCard {
@@ -379,7 +402,6 @@ h3 {
 }
 
 .progressBadge,
-.sourceBadge,
 .detailBlock,
 .notice {
   display: flex;
@@ -387,8 +409,7 @@ h3 {
   gap: 8px;
 }
 
-.progressBadge,
-.sourceBadge {
+.progressBadge {
   border-radius: 999px;
   padding: 8px 11px;
   font-size: 13px;
@@ -403,16 +424,6 @@ h3 {
 .progressBadge svg,
 .detailBlock svg {
   color: var(--teal);
-}
-
-.sourceBadge {
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--text);
-}
-
-.sourceBadge svg {
-  color: var(--blue);
 }
 
 .notice {
@@ -575,7 +586,6 @@ legend {
 }
 
 .detailPanel {
-  border-top: 1px solid var(--line);
   background: var(--surface);
 }
 
@@ -632,6 +642,18 @@ legend {
   line-height: 1.28;
 }
 
+.sourcePanel a {
+  color: var(--blue);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.28;
+  text-decoration: none;
+}
+
+.sourcePanel a:hover {
+  text-decoration: underline;
+}
+
 .sourcePanel span {
   font-size: 12px;
 }
@@ -652,19 +674,23 @@ legend {
   backdrop-filter: blur(16px);
 }
 
-.bottomNav a {
+.bottomNav button {
   display: grid;
   place-items: center;
   gap: 3px;
   min-height: 48px;
+  border: 0;
   border-radius: 13px;
+  background: transparent;
   color: var(--muted);
   font-size: 11px;
   font-weight: 700;
   text-decoration: none;
+  cursor: pointer;
 }
 
-.bottomNav a:hover {
+.bottomNav button:hover,
+.bottomNav button.selected {
   background: var(--blue-soft);
   color: var(--blue);
 }

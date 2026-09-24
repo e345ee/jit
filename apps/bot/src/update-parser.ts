@@ -6,6 +6,12 @@ const userSchema = z.object({
   username: z.string().optional()
 }).passthrough();
 
+const recipientSchema = z.object({
+  chat_id: z.union([z.string(), z.number()]).optional(),
+  user_id: z.union([z.string(), z.number()]).optional(),
+  chat_type: z.string().optional()
+}).passthrough();
+
 export const maxUpdateSchema = z.object({
   update_type: z.string(),
   timestamp: z.number().optional(),
@@ -13,6 +19,8 @@ export const maxUpdateSchema = z.object({
   user: userSchema.optional(),
   payload: z.string().nullable().optional(),
   message: z.object({
+    sender: userSchema.optional(),
+    recipient: recipientSchema.optional(),
     body: z.object({
       text: z.string().optional(),
       mid: z.string().optional()
@@ -24,7 +32,7 @@ export type MaxUpdate = z.infer<typeof maxUpdateSchema>;
 
 export function shouldWelcome(update: MaxUpdate) {
   const text = update.message?.body?.text?.trim().toLowerCase();
-  return update.update_type === 'bot_started' || text === '/start' || text === 'старт';
+  return update.update_type === 'bot_started' || text === 'старт' || text?.startsWith('/start');
 }
 
 export function getMessageText(update: MaxUpdate) {
@@ -32,9 +40,14 @@ export function getMessageText(update: MaxUpdate) {
 }
 
 export function getChatTarget(update: MaxUpdate) {
+  const recipient = update.message?.recipient;
+  const sender = update.message?.sender;
+  const chatId = update.chat_id ?? recipient?.chat_id;
+  const userId = recipient?.chat_type === 'dialog' ? sender?.user_id : update.user?.user_id ?? sender?.user_id;
+
   return {
-    chatId: update.chat_id,
-    userId: update.user?.user_id
+    chatId,
+    userId
   };
 }
 

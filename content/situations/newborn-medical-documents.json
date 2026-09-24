@@ -55,7 +55,7 @@
   "knowledgeLinks": ["newborn-documents", "child-medical-documents", "digital-oms-policy", "clinic-attachment"],
   "sources": [
     {
-      "title": "Модельная памятка для семьи с новорожденным для MVP",
+      "title": "Памятка для семьи с новорожденным",
       "type": "synthetic",
       "actualOn": "2026-09-23"
     },
