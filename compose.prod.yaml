@@ -1,0 +1,28 @@
+services:
+  api:
+    deploy:
+      replicas: ${API_REPLICAS:-2}
+      update_config:
+        order: start-first
+      restart_policy:
+        condition: any
+
+  web:
+    deploy:
+      replicas: ${WEB_REPLICAS:-2}
+      update_config:
+        order: start-first
+      restart_policy:
+        condition: any
+
+  bot:
+    deploy:
+      replicas: ${BOT_REPLICAS:-1}
+      restart_policy:
+        condition: any
+
+  worker:
+    deploy:
+      replicas: ${WORKER_REPLICAS:-1}
+      restart_policy:
+        condition: any

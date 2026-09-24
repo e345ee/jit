@@ -1,0 +1,162 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      CONTENT_DIR: /app/content
+      DATABASE_URL: postgres://${POSTGRES_USER:-navigator}:${POSTGRES_PASSWORD:-navigator}@postgres:5432/${POSTGRES_DB:-navigator}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173,http://localhost:8080}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-120}
+      RATE_LIMIT_WINDOW: ${RATE_LIMIT_WINDOW:-1 minute}
+    ports:
+      - "127.0.0.1:${API_PORT:-3001}:3001"
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: /api
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8080}:8080"
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /var/run
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER:-navigator}:${POSTGRES_PASSWORD:-navigator}@postgres:5432/${POSTGRES_DB:-navigator}
+      WORKER_POLL_INTERVAL_MS: ${WORKER_POLL_INTERVAL_MS:-30000}
+      WORKER_BATCH_SIZE: ${WORKER_BATCH_SIZE:-20}
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+
+  bot:
+    build:
+      context: .
+      dockerfile: apps/bot/Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 3002
+      MINI_APP_PUBLIC_URL: ${MINI_APP_PUBLIC_URL}
+      CONTENT_API_URL: http://api:3001
+      MAX_API_URL: ${MAX_API_URL:-https://platform-api2.max.ru}
+      MAX_BOT_TOKEN_FILE: /run/secrets/max_bot_token
+      MAX_WEBHOOK_SECRET_FILE: /run/secrets/max_webhook_secret
+      BOT_RATE_LIMIT_MAX: ${BOT_RATE_LIMIT_MAX:-60}
+      BOT_RATE_LIMIT_WINDOW: ${BOT_RATE_LIMIT_WINDOW:-1 minute}
+    secrets:
+      - max_bot_token
+      - max_webhook_secret
+    ports:
+      - "127.0.0.1:${BOT_PORT:-3002}:3002"
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3002/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-navigator}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-navigator}
+      POSTGRES_DB: ${POSTGRES_DB:-navigator}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-navigator} -d ${POSTGRES_DB:-navigator}"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  postgres-data:
+  redis-data:
+
+secrets:
+  max_bot_token:
+    file: ./secrets/max_bot_token
+  max_webhook_secret:
+    file: ./secrets/max_webhook_secret

@@ -1,0 +1,73 @@
+name: patient-navigator-api-checks
+version: 0.1.0
+baseUrl: http://localhost:3001
+description: Required smoke checks for the Patient Navigator Content API.
+checks:
+  - id: api-health
+    method: GET
+    path: /health
+    expect:
+      status: 200
+      json:
+        status: ok
+        service: navigator-api
+  - id: api-ready
+    method: GET
+    path: /ready
+    expect:
+      status: 200
+      json:
+        status: ready
+        service: navigator-api
+  - id: content-version
+    method: GET
+    path: /content/version
+    expect:
+      status: 200
+      json:
+        situations: 34
+        knowledge: 53
+        dataStatus: mixed
+  - id: mri-search
+    method: GET
+    path: /situations?q=%D0%9C%D0%A0%D0%A2
+    expect:
+      status: 200
+      containsJson:
+        id: mri-contrast
+  - id: oms-search
+    method: GET
+    path: /situations?q=%D0%BE%D0%BC%D1%81
+    expect:
+      status: 200
+      containsJson:
+        id: oms-policy-update
+  - id: knowledge-snils-search
+    method: GET
+    path: /knowledge?q=%D0%A1%D0%9D%D0%98%D0%9B%D0%A1
+    expect:
+      status: 200
+      containsJson:
+        id: snils
+  - id: reminder-neutral-create
+    method: POST
+    path: /reminders
+    body:
+      situationId: mri-contrast
+      stepId: creatinine
+      remindAt: "2026-09-26T09:00:00.000Z"
+      text: "Напоминание: проверьте срок документа."
+    expect:
+      status: 201
+      json:
+        status: pending
+  - id: reminder-medical-details-rejected
+    method: POST
+    path: /reminders
+    body:
+      situationId: mri-contrast
+      stepId: creatinine
+      remindAt: "2026-09-26T09:00:00.000Z"
+      text: "Напоминание: проверьте диагноз."
+    expect:
+      status: 400

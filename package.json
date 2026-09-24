@@ -1,0 +1,33 @@
+{
+  "name": "patient-navigator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @navigator/api & npm run dev -w @navigator/web",
+    "build": "npm run build -w @navigator/shared && npm run build -w @navigator/api && npm run build -w @navigator/bot && npm run build -w @navigator/worker && npm run build -w @navigator/web",
+    "test": "npm run test:content && npm run test:api && npm run test:bot && npm run test:worker",
+    "test:content": "npm run build -w @navigator/shared && vitest run tests/content.test.ts",
+    "test:api": "npm run build -w @navigator/shared && NODE_ENV=test REMINDERS_STORAGE=memory vitest run tests/api.test.ts",
+    "test:bot": "NODE_ENV=test vitest run tests/bot.test.ts",
+    "test:worker": "NODE_ENV=test vitest run tests/worker.test.ts",
+    "test:e2e": "node tests/e2e.mjs",
+    "lint": "npm run lint -ws --if-present",
+    "smoke": "node scripts/smoke.mjs",
+    "audit:deps": "npm audit --audit-level=moderate",
+    "audit:project": "node scripts/audit-project.mjs",
+    "audit:slop": "node scripts/audit-neuroslop.mjs",
+    "check:secrets": "node scripts/check-secrets.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "vitest": "^4.1.11"
+  }
+}

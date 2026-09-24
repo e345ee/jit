@@ -1,0 +1,30 @@
+.env
+.env.*
+!.env.example
+
+node_modules/
+dist/
+build/
+apps/*/dist/
+packages/*/dist/
+.next/
+.vite/
+coverage/
+
+tmp/
+output/
+*.log
+.DS_Store
+
+# Secrets and local credentials
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials/
+
+# Editor and OS files
+.idea/
+.vscode/
+Thumbs.db
