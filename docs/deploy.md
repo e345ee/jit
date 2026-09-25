@@ -2,7 +2,7 @@
 
 ## Цель
 
-Поднять проверяемый контур MVP: `web`, `api`, `bot`, `worker`, `postgres`, `redis`, публичный HTTPS для MAX mini app и webhook, без попадания секретов в репозиторий или Docker build context.
+Поднять проверяемый контур: `web`, `api`, `bot`, `worker`, `postgres`, `redis`, публичный HTTPS для MAX mini app и webhook, без попадания секретов в репозиторий или Docker build context.
 
 ## Перед деплоем
 
@@ -55,6 +55,7 @@ SMOKE_API_URL=http://127.0.0.1:3001 npm run smoke
 - `MAX_BOT_TOKEN` или Docker secret `max_bot_token`.
 - `MAX_WEBHOOK_SECRET` или Docker secret `max_webhook_secret`.
 - `MINI_APP_PUBLIC_URL` - только HTTPS, без плейсхолдера.
+- `MAX_MINI_APP_WEB_APP` - публичное имя или MAX-ссылка бота для нативной кнопки `open_app`, если MAX требует явную ссылку.
 - `API_PUBLIC_URL` - HTTPS адрес API, если API открыт отдельно.
 - `CORS_ORIGIN` - публичный origin mini app.
 - `COMMIT_SHA` - hash сдаваемой версии.
@@ -83,8 +84,7 @@ Bot в `NODE_ENV=production` не стартует, если `MINI_APP_PUBLIC_UR
 
 ## Что остается production-долгом
 
-- Реальная отправка due-напоминаний из worker в MAX вместо безопасного демо-режима `reminder delivery disabled in demo mode`.
 - Secret manager вместо локальных файлов.
 - Централизованные логи и метрики.
 - Backup PostgreSQL.
-- Миграционный инструмент вместо встроенного `CREATE TABLE IF NOT EXISTS`.
+- Внешний reverse proxy или ingress с TLS для стабильного публичного контура.

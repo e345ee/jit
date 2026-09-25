@@ -78,6 +78,13 @@ describe('navigator api', () => {
     const fetched = await server.inject(`/reminders/${created.json().id}`);
     expect(fetched.statusCode).toBe(200);
     expect(fetched.json().text).toBe(payload.text);
+
+    const cancelled = await server.inject({
+      method: 'DELETE',
+      url: `/reminders/${created.json().id}`
+    });
+    expect(cancelled.statusCode).toBe(200);
+    expect(cancelled.json()).toMatchObject({ ok: true });
   });
 
   it('returns predictable errors for missing cards and unsafe reminders', async () => {

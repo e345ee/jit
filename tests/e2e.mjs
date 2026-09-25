@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { chromium } from '@playwright/test';
 
@@ -8,7 +9,19 @@ const API_URL = `http://127.0.0.1:${API_PORT}`;
 const WEB_URL = `http://127.0.0.1:${WEB_PORT}`;
 const binSuffix = process.platform === 'win32' ? '.cmd' : '';
 const rootDir = process.cwd();
-const binDir = path.join(rootDir, 'node_modules', '.bin');
+
+function resolveBin(name) {
+  const fileName = `${name}${binSuffix}`;
+  const candidates = [
+    path.join(rootDir, 'node_modules', '.bin', fileName),
+    path.join(rootDir, '..', 'node_modules', '.bin', fileName)
+  ];
+  const found = candidates.find((candidate) => existsSync(candidate));
+  if (!found) {
+    throw new Error(`Cannot find ${fileName} in local node_modules/.bin`);
+  }
+  return found;
+}
 
 function start(command, args, env, cwd = process.cwd()) {
   const child = spawn(command, args, {
@@ -37,7 +50,7 @@ async function waitFor(url, timeoutMs = 30_000) {
 }
 
 async function main() {
-  const api = start(path.join(binDir, `tsx${binSuffix}`), ['apps/api/src/server.ts'], {
+  const api = start(resolveBin('tsx'), ['apps/api/src/server.ts'], {
     HOST: '127.0.0.1',
     PORT: String(API_PORT),
     CORS_ORIGIN: WEB_URL,
@@ -45,7 +58,7 @@ async function main() {
     NODE_ENV: 'development'
   });
   const web = start(
-    path.join(binDir, `vite${binSuffix}`),
+    resolveBin('vite'),
     ['--host', '127.0.0.1', '--port', String(WEB_PORT)],
     { VITE_API_URL: API_URL },
     'apps/web'
@@ -60,20 +73,22 @@ async function main() {
     await page.goto(WEB_URL);
 
     await page.getByPlaceholder('Документ, справка или ситуация').fill('СНИЛС');
-    const snilsKnowledge = page.locator('.knowledgeItem').filter({ hasText: 'СНИЛС и где его получить' });
+    await page.getByRole('navigation', { name: 'Основная навигация' }).getByRole('button', { name: 'Справки' }).click();
+    const snilsKnowledge = page.locator('.knowledgeItem').filter({ hasText: 'СНИЛС' }).first();
     await snilsKnowledge.waitFor();
-    await snilsKnowledge.click();
-    await page.getByRole('heading', { name: /СНИЛС/ }).waitFor();
 
     await page.getByPlaceholder('Документ, справка или ситуация').fill('МРТ');
+    await page.locator('.resultItem').filter({ hasText: 'МРТ с контрастом' }).first().click();
     await page.getByRole('heading', { name: 'МРТ с контрастом' }).waitFor();
     await page.locator('.questions fieldset').nth(0).getByRole('button', { name: 'Да' }).click();
     await page.locator('.questions fieldset').nth(1).getByRole('button', { name: 'Нет' }).click();
     await page.getByRole('button', { name: 'Отметить шаг' }).first().click();
-    await page.getByRole('button', { name: /Сдайте анализ на креатинин/ }).click();
-    await page.getByRole('heading', { name: 'Где получить' }).waitFor();
     await page.getByRole('button', { name: 'Напомнить' }).first().click();
     await page.getByText('Напоминание создано без диагноза').waitFor();
+    await page.getByRole('button', { name: 'Отменить напоминание' }).first().click();
+    await page.getByText('Напоминание отменено').waitFor();
+    await page.getByRole('button', { name: /Сдайте анализ на креатинин/ }).click();
+    await page.getByRole('heading', { name: 'Где получить' }).waitFor();
 
     for (const query of ['полис', 'больничный', 'ребенок', 'переезд', 'льготы']) {
       await page.getByPlaceholder('Документ, справка или ситуация').fill(query);

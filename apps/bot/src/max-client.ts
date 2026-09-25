@@ -3,6 +3,8 @@ export interface SendMessageOptions {
   userId?: string | number;
   text: string;
   miniAppUrl?: string;
+  miniAppNativeRef?: string;
+  miniAppPayload?: string;
 }
 
 const DEFAULT_MAX_API_URL = 'https://platform-api2.max.ru';
@@ -44,8 +46,14 @@ export class MaxClient {
                 buttons: [
                   [
                     {
+                      type: 'open_app',
+                      text: 'Открыть в MAX',
+                      ...(options.miniAppNativeRef ? { web_app: options.miniAppNativeRef } : {}),
+                      ...(options.miniAppPayload ? { payload: options.miniAppPayload } : {})
+                    },
+                    {
                       type: 'link',
-                      text: 'Открыть навигатор',
+                      text: 'Открыть ссылкой',
                       url: options.miniAppUrl
                     }
                   ]

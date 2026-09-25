@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Patient Navigator API
   version: 0.1.0
-  description: Content and neutral reminder API for the MAX patient navigator MVP.
+  description: Content and neutral reminder API for the MAX patient navigator.
 servers:
   - url: http://localhost:3001
     description: Local development API

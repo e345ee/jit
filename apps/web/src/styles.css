@@ -510,6 +510,11 @@ legend {
   color: var(--blue);
 }
 
+.iconButton.active {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
 .iconButton:hover {
   border-color: var(--blue);
   background: var(--blue-soft);

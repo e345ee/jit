@@ -1,6 +1,6 @@
 # Стек
 
-## Рекомендуемый стек MVP
+## Рекомендуемый стек
 
 - Frontend mini app: React, TypeScript, Vite.
 - UI: MAX UI, если доступна и подходит; иначе собственные компоненты с визуальной совместимостью под MAX.
@@ -8,8 +8,8 @@
 - Backend API: Node.js, TypeScript, Fastify.
 - Database: PostgreSQL для напоминаний и служебных сущностей.
 - Queue/cache: Redis + BullMQ для отложенных уведомлений.
-- Content: JSON/Markdown в репозитории с Zod-валидацией.
-- Search MVP: Fuse.js на клиенте или endpoint поиска по подготовленному индексу.
+- Content: JSON в репозитории с Zod-валидацией.
+- Search: endpoint поиска по подготовленному индексу.
 - Docker: multi-stage Dockerfile, compose.yaml.
 - Tests: Vitest для unit-тестов, Playwright для основного сценария mini app.
 - Observability: pino logs, healthchecks, basic metrics endpoint.
@@ -20,7 +20,7 @@ React и TypeScript соответствуют рекомендациям PDF и
 
 ## Режимы запуска
 
-1. Local MVP
+1. Local run
    - `web`, `api`, `bot`, `worker`, `postgres`, `redis`.
    - Все запускается через `compose.yaml`.
 
@@ -47,4 +47,3 @@ React и TypeScript соответствуют рекомендациям PDF и
 - `Reminder`
 
 Каждая карточка обязана иметь источник, дату актуальности, регион применимости и пометку о тестовых или модельных данных, если применимо.
-

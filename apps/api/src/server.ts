@@ -69,6 +69,7 @@ export function buildServer(reminderRepository: ReminderRepository = createRemin
   });
 
   app.register(cors, {
+    methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
     origin: (origin, callback) => {
       const allowed = (process.env.CORS_ORIGIN ?? 'http://localhost:5173,http://localhost:8080')
         .split(',')

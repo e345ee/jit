@@ -66,6 +66,7 @@ export function loadKnowledge(query = '') {
 }
 
 export async function createReminder(payload: {
+  chatId?: string;
   situationId: string;
   stepId: string;
   remindAt: string;
@@ -79,6 +80,18 @@ export async function createReminder(payload: {
 
   if (!response.ok) {
     throw new Error(`Reminder failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function cancelReminder(id: string) {
+  const response = await fetch(`${API_URL}/reminders/${encodeURIComponent(id)}`, {
+    method: 'DELETE'
+  });
+
+  if (!response.ok) {
+    throw new Error(`Reminder cancel failed: ${response.status}`);
   }
 
   return response.json();

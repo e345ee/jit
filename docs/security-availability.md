@@ -2,7 +2,7 @@
 
 ## Базовая позиция
 
-MVP должен подниматься безопасно по умолчанию: секреты не попадают в git, внешние webhook-запросы проверяются, контейнеры ограничены по правам, а сервисы имеют healthcheck и restart policy. Доступность строится через разделение компонентов: `web`, `api`, `bot`, `worker`, `postgres`, `redis`.
+Проект поднимается безопасно по умолчанию: секреты не попадают в git, внешние webhook-запросы проверяются, контейнеры ограничены по правам, а сервисы имеют healthcheck и restart policy. Доступность строится через разделение компонентов: `web`, `api`, `bot`, `worker`, `postgres`, `redis`.
 
 ## Что уже заложено
 
@@ -22,6 +22,7 @@ MVP должен подниматься безопасно по умолчани
 - При подписке в MAX нужно передать `secret`.
 - Bot проверяет заголовок `X-Max-Bot-Api-Secret` через переменную `MAX_WEBHOOK_SECRET`.
 - Если секрет не совпал, webhook отклоняется с `401`.
+- Повторные webhook-события дедуплицируются по message id или устойчивому ключу события.
 
 ### HTTP security
 
@@ -74,8 +75,8 @@ chmod 600 secrets/max_bot_token secrets/max_webhook_secret
 
 - `web` - статический frontend, можно держать несколько реплик или вынести на CDN.
 - `api` - stateless content API, можно масштабировать горизонтально.
-- `bot` - webhook-обработчик. Можно масштабировать после введения idempotency/event deduplication.
-- `worker` - отдельный сервис для due-напоминаний, читает PostgreSQL батчами.
+- `bot` - webhook-обработчик с idempotency/event deduplication.
+- `worker` - отдельный сервис для due-напоминаний, читает PostgreSQL батчами и отправляет нейтральные сообщения через MAX Bot API.
 - `postgres` - состояние напоминаний и служебных данных.
 - `redis` - очередь и rate limiting.
 
@@ -103,8 +104,6 @@ docker compose -f compose.yaml -f compose.prod.yaml up --build
 
 ## Что еще нужно до production
 
-- Подключить реальную отправку напоминаний из `worker` в MAX через безопасный адаптер.
-- Добавить дедупликацию webhook-событий по event id или комбинации timestamp/update/chat.
 - Включить централизованные логи и метрики.
 - Добавить резервное копирование PostgreSQL.
 - Настроить внешний reverse proxy или ingress с TLS.

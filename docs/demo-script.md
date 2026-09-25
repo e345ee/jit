@@ -4,7 +4,7 @@ Target length: 3-4 minutes.
 
 ## 0:00-0:30 Problem
 
-Patient routes are fragmented: a person has to understand documents, deadlines, where to get them, and what mistakes break the appointment. The MVP focuses on one concrete route instead of a generic medical chatbot.
+Patient routes are fragmented: a person has to understand documents, deadlines, where to get them, and what mistakes break the appointment. The product focuses on one concrete route instead of a generic medical chatbot.
 
 ## 0:30-1:00 Entry through MAX
 
@@ -55,4 +55,3 @@ Pilot offer:
 - metrics: successful card opens, checklist completion, support questions reduced, user feedback.
 
 Do not promise medical advice. Promise navigation, fewer missed documents, and clearer patient communication.
-

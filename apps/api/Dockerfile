@@ -21,6 +21,7 @@ RUN npm install --omit=dev
 COPY --from=build /app/packages/shared/dist packages/shared/dist
 COPY --from=build /app/apps/api/dist apps/api/dist
 COPY content content
+COPY infra/postgres/migrations infra/postgres/migrations
 ENV CONTENT_DIR=/app/content
 USER node
 EXPOSE 3001

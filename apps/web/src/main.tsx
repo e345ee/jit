@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import {
   AlertCircle,
   Bell,
+  BellOff,
   BookOpen,
   CalendarClock,
   Check,
@@ -15,12 +16,13 @@ import {
   Search,
   ShieldCheck
 } from 'lucide-react';
-import { createReminder, loadKnowledge, loadSituations } from './api';
+import { cancelReminder, createReminder, loadKnowledge, loadSituations } from './api';
 import type { KnowledgeCard, SituationCard, SituationStep } from './types';
 import './styles.css';
 
 type Answers = Record<string, string>;
 type View = 'routes' | 'route' | 'knowledge' | 'details';
+type ReminderByStep = Record<string, { id: string; status: 'pending' | 'sent' | 'cancelled' }>;
 
 const categories = [
   { label: 'Документы', query: 'документ' },
@@ -93,6 +95,15 @@ function stepMatches(step: SituationStep, answers: Answers) {
   });
 }
 
+function readMaxTarget() {
+  if (typeof window === 'undefined') return undefined;
+  const params = new URLSearchParams(window.location.search);
+  const value = params.get('maxTarget') ?? params.get('start_param') ?? params.get('payload') ?? params.get('startapp');
+  if (!value) return undefined;
+  const decoded = decodeURIComponent(value);
+  return /^(chat|user):[\w:.-]+$/.test(decoded) ? decoded : undefined;
+}
+
 function App() {
   const [query, setQuery] = useState('');
   const [situations, setSituations] = useState<SituationCard[]>([]);
@@ -107,7 +118,9 @@ function App() {
   const [reloadKey, setReloadKey] = useState(0);
   const [isOnline, setIsOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
   const [connectionDialogDismissed, setConnectionDialogDismissed] = useState(false);
-  const [reminderState, setReminderState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [reminderState, setReminderState] = useState<'idle' | 'saving' | 'saved' | 'cancelled' | 'error'>('idle');
+  const [maxTarget] = useState(readMaxTarget);
+  const [remindersByStep, setRemindersByStep] = useState<ReminderByStep>({});
 
   useEffect(() => {
     function handleOnline() {
@@ -166,6 +179,27 @@ function App() {
     [selected, answers]
   );
   const completed = visibleSteps.filter((step) => checklist.checked[step.id]).length;
+  const reminderKey = selected?.id ? `navigator:reminders:${selected.id}` : '';
+
+  useEffect(() => {
+    if (!reminderKey) {
+      setRemindersByStep({});
+      return;
+    }
+
+    try {
+      const raw = localStorage.getItem(reminderKey);
+      setRemindersByStep(raw ? JSON.parse(raw) : {});
+    } catch {
+      setRemindersByStep({});
+    }
+  }, [reminderKey]);
+
+  function saveReminderState(next: ReminderByStep) {
+    setRemindersByStep(next);
+    if (!reminderKey) return;
+    localStorage.setItem(reminderKey, JSON.stringify(next));
+  }
   const visibleKnowledge = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return knowledge.slice(0, 10);
@@ -189,13 +223,33 @@ function App() {
     setReminderState('saving');
     const remindAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
     try {
-      await createReminder({
+      const reminder = await createReminder({
+        chatId: maxTarget,
         situationId: selected.id,
         stepId: step.id,
         remindAt,
         text: 'Пора вернуться к сохраненному шагу маршрута.'
       });
+      saveReminderState({
+        ...remindersByStep,
+        [step.id]: { id: reminder.id, status: reminder.status }
+      });
       setReminderState('saved');
+    } catch {
+      setReminderState('error');
+    }
+  }
+
+  async function removeReminder(step: SituationStep) {
+    const reminder = remindersByStep[step.id];
+    if (!reminder) return;
+    setReminderState('saving');
+    try {
+      await cancelReminder(reminder.id);
+      const next = { ...remindersByStep };
+      delete next[step.id];
+      saveReminderState(next);
+      setReminderState('cancelled');
     } catch {
       setReminderState('error');
     }
@@ -398,8 +452,13 @@ function App() {
                       <strong>{step.title}</strong>
                       <span>{step.summary}</span>
                     </button>
-                    <button className="iconButton" type="button" aria-label="Напомнить" onClick={() => scheduleReminder(step)}>
-                      <Bell size={17} />
+                    <button
+                      className={`iconButton ${remindersByStep[step.id] ? 'active' : ''}`}
+                      type="button"
+                      aria-label={remindersByStep[step.id] ? 'Отменить напоминание' : 'Напомнить'}
+                      onClick={() => (remindersByStep[step.id] ? removeReminder(step) : scheduleReminder(step))}
+                    >
+                      {remindersByStep[step.id] ? <BellOff size={17} /> : <Bell size={17} />}
                     </button>
                   </article>
                 ))}
@@ -504,8 +563,9 @@ function App() {
       {reminderState !== 'idle' && (
         <div className={`toast ${reminderState}`}>
           {reminderState === 'saving' && 'Создаем напоминание...'}
-          {reminderState === 'saved' && 'Напоминание создано.'}
-          {reminderState === 'error' && 'Не удалось создать напоминание. Маршрут можно продолжить.'}
+          {reminderState === 'saved' && 'Напоминание создано без диагноза.'}
+          {reminderState === 'cancelled' && 'Напоминание отменено.'}
+          {reminderState === 'error' && 'Не удалось обновить напоминание. Маршрут можно продолжить.'}
         </div>
       )}
 

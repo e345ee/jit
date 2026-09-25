@@ -28,6 +28,7 @@ function readSecret(name: string) {
 
 const token = readSecret('MAX_BOT_TOKEN');
 const miniAppUrl = process.env.MINI_APP_PUBLIC_URL ?? 'http://localhost:5173';
+const miniAppNativeRef = process.env.MAX_MINI_APP_WEB_APP;
 const webhookSecret = readSecret('MAX_WEBHOOK_SECRET');
 const dedupTtlMs = Number(process.env.BOT_DEDUP_TTL_MS ?? 10 * 60 * 1000);
 const seenUpdates = new Map<string, number>();
@@ -76,6 +77,26 @@ function publicError(error: unknown) {
     statusCode,
     message: typeof maybeError.message === 'string' ? maybeError.message : 'internal_error'
   };
+}
+
+function miniAppUrlForTarget(target: { chatId?: string | number; userId?: string | number }) {
+  const url = new URL(miniAppUrl);
+  if (target.chatId) {
+    url.searchParams.set('maxTarget', `chat:${target.chatId}`);
+  } else if (target.userId) {
+    url.searchParams.set('maxTarget', `user:${target.userId}`);
+  }
+  return url.toString();
+}
+
+function miniAppPayloadForTarget(target: { chatId?: string | number; userId?: string | number }) {
+  if (target.chatId) {
+    return `chat:${target.chatId}`;
+  }
+  if (target.userId) {
+    return `user:${target.userId}`;
+  }
+  return undefined;
 }
 
 export function buildServer() {
@@ -166,7 +187,9 @@ export function buildServer() {
     if (shouldWelcome(update)) {
       await max.sendMessage({
         ...target,
-        miniAppUrl,
+        miniAppUrl: miniAppUrlForTarget(target),
+        miniAppNativeRef,
+        miniAppPayload: miniAppPayloadForTarget(target),
         text: [
           '**Навигатор для пациента**',
           '',
@@ -185,7 +208,9 @@ export function buildServer() {
     if (messageText) {
       await max.sendMessage({
         ...target,
-        miniAppUrl,
+        miniAppUrl: miniAppUrlForTarget(target),
+        miniAppNativeRef,
+        miniAppPayload: miniAppPayloadForTarget(target),
         text: await contentAdvisor.replyTo(messageText)
       });
     }

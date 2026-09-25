@@ -18,6 +18,7 @@ afterEach(() => {
   delete process.env.MAX_BOT_TOKEN;
   delete process.env.MAX_WEBHOOK_SECRET;
   delete process.env.MINI_APP_PUBLIC_URL;
+  delete process.env.MAX_MINI_APP_WEB_APP;
   delete process.env.CONTENT_API_URL;
 });
 
@@ -72,7 +73,8 @@ describe('max bot webhook', () => {
     const { buildServer } = await loadBotServer({
       MAX_BOT_TOKEN: 'token',
       MAX_WEBHOOK_SECRET: 'secret',
-      MINI_APP_PUBLIC_URL: 'https://navigator.example.test'
+      MINI_APP_PUBLIC_URL: 'https://navigator.example.test',
+      MAX_MINI_APP_WEB_APP: 't617_hakaton_max_bot'
     });
     const app = buildServer();
     const response = await app.inject({
@@ -90,8 +92,12 @@ describe('max bot webhook', () => {
     expect(response.json()).toMatchObject({ ok: true });
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(String(fetchMock.mock.calls[0][0])).toContain('/messages?chat_id=123');
-    expect(fetchMock.mock.calls[0][1]?.body).toContain('Открыть навигатор');
-    expect(fetchMock.mock.calls[0][1]?.body).not.toContain('open_app');
+    expect(fetchMock.mock.calls[0][1]?.body).toContain('Открыть в MAX');
+    expect(fetchMock.mock.calls[0][1]?.body).toContain('open_app');
+    expect(fetchMock.mock.calls[0][1]?.body).toContain('t617_hakaton_max_bot');
+    expect(fetchMock.mock.calls[0][1]?.body).toContain('chat:123');
+    expect(fetchMock.mock.calls[0][1]?.body).toContain('Открыть ссылкой');
+    expect(fetchMock.mock.calls[0][1]?.body).toContain('maxTarget=chat%3A123');
     await app.close();
   });
 
@@ -125,6 +131,9 @@ describe('max bot webhook', () => {
     expect(response.statusCode).toBe(200);
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(String(fetchMock.mock.calls[0][0])).toContain('/messages?user_id=456');
+    expect(fetchMock.mock.calls[0][1]?.body).toContain('open_app');
+    expect(fetchMock.mock.calls[0][1]?.body).toContain('user:456');
+    expect(fetchMock.mock.calls[0][1]?.body).toContain('maxTarget=user%3A456');
     await app.close();
   });
 });
