@@ -5,7 +5,7 @@
 - `apps/bot` exposes `GET /health`, `GET /me` and `POST /webhook`.
 - The bot reads `MAX_BOT_TOKEN` from local `.env` or `MAX_BOT_TOKEN_FILE` in Docker.
 - The webhook checks `X-Max-Bot-Api-Secret` when `MAX_WEBHOOK_SECRET` is configured.
-- `/start`, `старт` and `bot_started` send a short safety message and an inline keyboard with native mini app opening plus a link fallback.
+- `/start`, `старт` and `bot_started` send a short safety message and an inline keyboard with native mini app opening.
 - Free text messages search the same content API as the mini app and return a short route directly in the bot.
 - The mini app URL is taken from `MINI_APP_PUBLIC_URL`.
 - Native MAX opening uses `open_app`; `MAX_MINI_APP_WEB_APP` can explicitly point to the bot public name or MAX bot link when MAX requires it.
@@ -47,12 +47,11 @@ The public bot URL must use HTTPS. MAX expects a fast response from the webhook,
 
 ## Mini app button
 
-The current adapter sends two buttons:
+The current adapter sends one button:
 
-- `open_app` with optional `web_app = MAX_MINI_APP_WEB_APP` and `payload = chat:<id>` or `user:<id>`;
-- fallback `link` with `MINI_APP_PUBLIC_URL` and `maxTarget` query parameter.
+- `open_app` with optional `web_app = MAX_MINI_APP_WEB_APP` and `payload = chat:<id>` or `user:<id>`.
 
-The mini app reads both URL query (`maxTarget`) and MAX start parameters (`start_param`/`payload`/`startapp`) so neutral reminders keep the correct chat or user target in either opening mode.
+The mini app reads MAX start parameters (`start_param`/`payload`/`startapp`) so neutral reminders keep the correct chat or user target after native opening. URL query `maxTarget` is kept only for local diagnostics and old direct links.
 
 ## Final demo checklist
 

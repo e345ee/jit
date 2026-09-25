@@ -11,7 +11,7 @@ Patient routes are fragmented: a person has to understand documents, deadlines, 
 1. Open the existing MAX bot.
 2. Send `/start`.
 3. Show the neutral intro: the product does not diagnose, does not interpret tests, and does not replace a doctor.
-4. Click "Открыть навигатор".
+4. Click "Открыть в MAX".
 
 ## 1:00-2:20 Main scenario
 

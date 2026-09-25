@@ -2,7 +2,6 @@ export interface SendMessageOptions {
   chatId?: string | number;
   userId?: string | number;
   text: string;
-  miniAppUrl?: string;
   miniAppNativeRef?: string;
   miniAppPayload?: string;
 }
@@ -38,7 +37,7 @@ export class MaxClient {
     const body = {
       text: options.text,
       format: 'markdown',
-      attachments: options.miniAppUrl
+      attachments: options.miniAppNativeRef || options.miniAppPayload
         ? [
             {
               type: 'inline_keyboard',
@@ -50,11 +49,6 @@ export class MaxClient {
                       text: 'Открыть в MAX',
                       ...(options.miniAppNativeRef ? { web_app: options.miniAppNativeRef } : {}),
                       ...(options.miniAppPayload ? { payload: options.miniAppPayload } : {})
-                    },
-                    {
-                      type: 'link',
-                      text: 'Открыть ссылкой',
-                      url: options.miniAppUrl
                     }
                   ]
                 ]

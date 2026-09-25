@@ -79,16 +79,6 @@ function publicError(error: unknown) {
   };
 }
 
-function miniAppUrlForTarget(target: { chatId?: string | number; userId?: string | number }) {
-  const url = new URL(miniAppUrl);
-  if (target.chatId) {
-    url.searchParams.set('maxTarget', `chat:${target.chatId}`);
-  } else if (target.userId) {
-    url.searchParams.set('maxTarget', `user:${target.userId}`);
-  }
-  return url.toString();
-}
-
 function miniAppPayloadForTarget(target: { chatId?: string | number; userId?: string | number }) {
   if (target.chatId) {
     return `chat:${target.chatId}`;
@@ -187,7 +177,6 @@ export function buildServer() {
     if (shouldWelcome(update)) {
       await max.sendMessage({
         ...target,
-        miniAppUrl: miniAppUrlForTarget(target),
         miniAppNativeRef,
         miniAppPayload: miniAppPayloadForTarget(target),
         text: [
@@ -208,7 +197,6 @@ export function buildServer() {
     if (messageText) {
       await max.sendMessage({
         ...target,
-        miniAppUrl: miniAppUrlForTarget(target),
         miniAppNativeRef,
         miniAppPayload: miniAppPayloadForTarget(target),
         text: await contentAdvisor.replyTo(messageText)

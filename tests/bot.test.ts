@@ -96,8 +96,9 @@ describe('max bot webhook', () => {
     expect(fetchMock.mock.calls[0][1]?.body).toContain('open_app');
     expect(fetchMock.mock.calls[0][1]?.body).toContain('t617_hakaton_max_bot');
     expect(fetchMock.mock.calls[0][1]?.body).toContain('chat:123');
-    expect(fetchMock.mock.calls[0][1]?.body).toContain('Открыть ссылкой');
-    expect(fetchMock.mock.calls[0][1]?.body).toContain('maxTarget=chat%3A123');
+    expect(fetchMock.mock.calls[0][1]?.body).not.toContain('"link"');
+    expect(fetchMock.mock.calls[0][1]?.body).not.toContain('Открыть ссылкой');
+    expect(fetchMock.mock.calls[0][1]?.body).not.toContain('maxTarget=');
     await app.close();
   });
 
@@ -133,7 +134,8 @@ describe('max bot webhook', () => {
     expect(String(fetchMock.mock.calls[0][0])).toContain('/messages?user_id=456');
     expect(fetchMock.mock.calls[0][1]?.body).toContain('open_app');
     expect(fetchMock.mock.calls[0][1]?.body).toContain('user:456');
-    expect(fetchMock.mock.calls[0][1]?.body).toContain('maxTarget=user%3A456');
+    expect(fetchMock.mock.calls[0][1]?.body).not.toContain('"link"');
+    expect(fetchMock.mock.calls[0][1]?.body).not.toContain('maxTarget=');
     await app.close();
   });
 });
