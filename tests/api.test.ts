@@ -31,7 +31,7 @@ describe('navigator api', () => {
 
     const version = await server.inject('/content/version');
     expect(version.statusCode).toBe(200);
-    expect(version.json()).toMatchObject({ dataStatus: 'mixed', situations: 34, knowledge: 53 });
+    expect(version.json()).toMatchObject({ dataStatus: 'mixed', situations: 60, knowledge: 112 });
   });
 
   it('searches situations and knowledge', async () => {
