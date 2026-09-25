@@ -75,7 +75,7 @@ COMPOSE_PROJECT_NAME=patient-navigator DOCKER_BUILDKIT=0 COMPOSE_DOCKER_CLI_BUIL
 - `apps/bot` - MAX bot webhook и адаптер `platform-api2.max.ru`.
 - `apps/worker` - обработчик due-напоминаний из PostgreSQL.
 - `packages/shared` - схемы и типы контента.
-- `content` - карточки ситуаций и базы знаний: сейчас 72 ситуации и 145 справочных материалов.
+- `content` - карточки ситуаций и базы знаний: сейчас 72 ситуации и 146 справочных материалов.
 - `docs` - продуктовые, технические и коммерческие материалы.
 
 ## Документы

@@ -1,0 +1,37 @@
+{
+  "id": "gosuslugi-medical-services-links",
+  "title": "Госуслуги: прямые ссылки на медицинские сервисы",
+  "summary": "Для части медицинских маршрутов удобнее сразу открывать нужный сервис Госуслуг: диспансеризацию, запись к врачу, меддокументы, полис ОМС или прикрепление.",
+  "body": [
+    "Диспансеризация и профилактические осмотры: https://www.gosuslugi.ru/10088/1",
+    "Электронные медицинские документы: https://www.gosuslugi.ru/339024/1",
+    "Запись к врачу: https://www.gosuslugi.ru/600204/1/form",
+    "Сведения о полисе ОМС: https://www.gosuslugi.ru/329155/1",
+    "Прикрепление к поликлинике: https://www.gosuslugi.ru/314764/1",
+    "Раздел здоровья на Госуслугах: https://www.gosuslugi.ru/category/health"
+  ],
+  "tags": ["госуслуги", "диспансеризация", "справки", "медицинские документы", "полис", "запись"],
+  "sourceIds": ["gosuslugi-health", "gosuslugi-dispensary", "gosuslugi-med-documents"],
+  "sources": [
+    {
+      "title": "Госуслуги: здоровье",
+      "url": "https://www.gosuslugi.ru/category/health",
+      "type": "official",
+      "actualOn": "2026-09-25"
+    },
+    {
+      "title": "Госуслуги: диспансеризация и профилактические осмотры",
+      "url": "https://www.gosuslugi.ru/10088/1",
+      "type": "official",
+      "actualOn": "2026-09-25"
+    },
+    {
+      "title": "Госуслуги: электронные медицинские документы",
+      "url": "https://www.gosuslugi.ru/339024/1",
+      "type": "official",
+      "actualOn": "2026-09-25"
+    }
+  ],
+  "actualOn": "2026-09-25",
+  "dataStatus": "official"
+}

@@ -53,7 +53,7 @@ describe('content catalog', () => {
   it('validates all knowledge cards', async () => {
     const { files, parsed } = await readJsonFiles('knowledge', (value) => knowledgeCardSchema.parse(value));
 
-    expect(files.length).toBeGreaterThanOrEqual(145);
+    expect(files.length).toBeGreaterThanOrEqual(146);
     expect(parsed.some((card) => card.id === 'oms-dms')).toBe(true);
     expect(parsed.some((card) => card.id === 'snils')).toBe(true);
     expect(parsed.some((card) => card.id === 'electronic-sick-leave')).toBe(true);

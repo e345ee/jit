@@ -2,7 +2,7 @@ const baseUrl = process.env.SMOKE_API_URL ?? 'http://127.0.0.1:3001';
 const checks = [
   { id: 'health', path: '/health', expect: (json) => json.status === 'ok' },
   { id: 'ready', path: '/ready', expect: (json) => json.status === 'ready' },
-  { id: 'version', path: '/content/version', expect: (json) => json.situations >= 72 && json.knowledge >= 145 },
+  { id: 'version', path: '/content/version', expect: (json) => json.situations >= 72 && json.knowledge >= 146 },
   { id: 'mri-search', path: '/situations?q=%D0%9C%D0%A0%D0%A2', expect: (json) => json.some((item) => item.id === 'mri-contrast') },
   { id: 'oms-search', path: '/situations?q=%D0%BE%D0%BC%D1%81', expect: (json) => json.some((item) => item.id === 'oms-policy-update') },
   { id: 'snils-search', path: '/knowledge?q=%D0%A1%D0%9D%D0%98%D0%9B%D0%A1', expect: (json) => json.some((item) => item.id === 'snils') }
