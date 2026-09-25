@@ -23,7 +23,7 @@ describe('content catalog', () => {
     const knowledge = await readJsonFiles('knowledge', (value) => knowledgeCardSchema.parse(value));
     const knowledgeIds = new Set(knowledge.parsed.map((card) => card.id));
 
-    expect(files.length).toBeGreaterThanOrEqual(60);
+    expect(files.length).toBeGreaterThanOrEqual(72);
     expect(parsed.some((card) => card.id === 'mri-contrast')).toBe(true);
 
     for (const card of parsed) {
@@ -53,7 +53,7 @@ describe('content catalog', () => {
   it('validates all knowledge cards', async () => {
     const { files, parsed } = await readJsonFiles('knowledge', (value) => knowledgeCardSchema.parse(value));
 
-    expect(files.length).toBeGreaterThanOrEqual(112);
+    expect(files.length).toBeGreaterThanOrEqual(145);
     expect(parsed.some((card) => card.id === 'oms-dms')).toBe(true);
     expect(parsed.some((card) => card.id === 'snils')).toBe(true);
     expect(parsed.some((card) => card.id === 'electronic-sick-leave')).toBe(true);

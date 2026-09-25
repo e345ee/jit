@@ -25,8 +25,8 @@ checks:
     expect:
       status: 200
       json:
-        situations: 60
-        knowledge: 112
+        situations: 72
+        knowledge: 145
         dataStatus: mixed
   - id: mri-search
     method: GET
