@@ -39,7 +39,7 @@ if [ "$REGISTER_MAX_WEBHOOK" = "1" ]; then
   secret="$(cat secrets/max_webhook_secret)"
   webhook_url="${PUBLIC_WEB_URL%/}/webhook"
   body="$(printf '{"url":"%s","update_types":["message_created","bot_started"],"secret":"%s"}' "$webhook_url" "$secret")"
-  response="$(curl -fsS -X POST 'https://platform-api2.max.ru/subscriptions' -H "Authorization: $token" -H 'Content-Type: application/json' -d "$body")"
+  response="$(curl --cacert secrets/russian_trusted_root_ca -fsS -X POST 'https://platform-api2.max.ru/subscriptions' -H "Authorization: $token" -H 'Content-Type: application/json' -d "$body")"
   printf '%s\n' "$response" | grep -q '"success"[[:space:]]*:[[:space:]]*true'
   echo "MAX webhook registered: $webhook_url"
 fi
