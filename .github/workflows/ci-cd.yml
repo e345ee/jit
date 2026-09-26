@@ -71,4 +71,4 @@ jobs:
           PUBLIC_WEB_URL: ${{ secrets.PUBLIC_WEB_URL }}
         run: |
           ssh -i ~/.ssh/deploy_key "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "cd '${DEPLOY_PATH}' && PUBLIC_WEB_URL='${PUBLIC_WEB_URL}' REGISTER_MAX_WEBHOOK=1 sh scripts/deploy-server.sh"
+            "cd '${DEPLOY_PATH}' && git fetch --prune origin && git reset --hard origin/main && PUBLIC_WEB_URL='${PUBLIC_WEB_URL}' REGISTER_MAX_WEBHOOK=1 sh scripts/deploy-server.sh"
