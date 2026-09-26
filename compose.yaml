@@ -12,6 +12,9 @@ services:
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-120}
       RATE_LIMIT_WINDOW: ${RATE_LIMIT_WINDOW:-1 minute}
       COMMIT_SHA: ${COMMIT_SHA:-local}
+      MAX_BOT_TOKEN_FILE: /run/secrets/max_bot_token
+    secrets:
+      - max_bot_token
     ports:
       - "127.0.0.1:${API_PORT:-3001}:3001"
     restart: unless-stopped
@@ -38,6 +41,7 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         VITE_API_URL: /api
+        VITE_REQUIRE_MAX_LAUNCH: ${VITE_REQUIRE_MAX_LAUNCH:-true}
     ports:
       - "127.0.0.1:${WEB_PORT:-8080}:8080"
     restart: unless-stopped

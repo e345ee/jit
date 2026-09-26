@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
+import { createHmac } from 'node:crypto';
 import { buildServer } from '../apps/api/src/server.js';
 import { MemoryReminderRepository } from '../apps/api/src/reminder-repository.js';
 
@@ -15,7 +16,19 @@ afterEach(async () => {
     await app.close();
     app = null;
   }
+  delete process.env.MAX_BOT_TOKEN;
+  delete process.env.MAX_INIT_DATA_MAX_AGE_SECONDS;
 });
+
+function createMaxInitData(token: string, values: Record<string, string>) {
+  const launchParams = Object.entries(values)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, value]) => `${key}=${value}`)
+    .join('\n');
+  const secretKey = createHmac('sha256', 'WebAppData').update(token).digest();
+  const hash = createHmac('sha256', secretKey).update(launchParams).digest('hex');
+  return new URLSearchParams({ ...values, hash }).toString();
+}
 
 describe('navigator api', () => {
   it('returns health and content version', async () => {
@@ -106,5 +119,33 @@ describe('navigator api', () => {
     });
     expect(invalidReminder.statusCode).toBe(400);
     expect(invalidReminder.json()).toMatchObject({ error: 'validation_error' });
+  });
+
+  it('validates signed MAX mini app sessions', async () => {
+    process.env.MAX_BOT_TOKEN = 'test-token';
+    process.env.MAX_INIT_DATA_MAX_AGE_SECONDS = String(365 * 24 * 60 * 60);
+    const server = createApp();
+    const initData = createMaxInitData('test-token', {
+      auth_date: String(Math.floor(Date.now() / 1000)),
+      query_id: 'query-1',
+      start_param: 'chat_123',
+      user: JSON.stringify({ id: 456, first_name: 'Max', last_name: 'User' })
+    });
+
+    const valid = await server.inject({
+      method: 'POST',
+      url: '/max/session',
+      payload: { initData }
+    });
+    expect(valid.statusCode).toBe(200);
+    expect(valid.json()).toMatchObject({ ok: true, target: 'chat:123' });
+
+    const invalid = await server.inject({
+      method: 'POST',
+      url: '/max/session',
+      payload: { initData: initData.replace('chat_123', 'chat_999') }
+    });
+    expect(invalid.statusCode).toBe(401);
+    expect(invalid.json()).toMatchObject({ ok: false, error: 'invalid_max_session' });
   });
 });

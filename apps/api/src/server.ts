@@ -2,6 +2,8 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import Fastify from 'fastify';
+import { createHmac, timingSafeEqual } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { z } from 'zod';
 import { ContentStore } from './content-store.js';
 import { createReminderRepository, type ReminderRepository } from './reminder-repository.js';
@@ -9,6 +11,20 @@ import { createReminderRepository, type ReminderRepository } from './reminder-re
 const port = Number(process.env.PORT ?? 3001);
 const host = process.env.HOST ?? '0.0.0.0';
 const store = new ContentStore();
+
+function readSecret(name: string) {
+  const directValue = process.env[name];
+  if (directValue) {
+    return directValue;
+  }
+
+  const filePath = process.env[`${name}_FILE`];
+  if (!filePath) {
+    return undefined;
+  }
+
+  return readFileSync(filePath, 'utf8').trim();
+}
 
 const FORBIDDEN_REMINDER_WORDS = [
   'диагноз',
@@ -39,6 +55,93 @@ const reminderSchema = z.object({
   text: z.string().min(1).max(240)
     .refine(isNeutralReminderText, 'Reminder text must stay neutral and avoid medical details')
 });
+
+const maxSessionSchema = z.object({
+  initData: z.string().min(1).max(8192)
+});
+
+function normalizeMaxTarget(value: string | undefined) {
+  if (!value) return undefined;
+  const decoded = decodeURIComponent(value);
+  const match = decoded.match(/^(chat|user)[:_-]([\w.-]+)$/);
+  return match ? `${match[1]}:${match[2]}` : undefined;
+}
+
+function getMaxSessionTarget(params: Map<string, string>) {
+  const startTarget = normalizeMaxTarget(params.get('start_param'));
+  if (startTarget) return startTarget;
+
+  const chat = params.get('chat');
+  if (chat) {
+    try {
+      const parsed = JSON.parse(chat) as { id?: string | number };
+      if (parsed.id) return `chat:${parsed.id}`;
+    } catch {
+      return undefined;
+    }
+  }
+
+  const user = params.get('user');
+  if (user) {
+    try {
+      const parsed = JSON.parse(user) as { id?: string | number };
+      if (parsed.id) return `user:${parsed.id}`;
+    } catch {
+      return undefined;
+    }
+  }
+
+  return undefined;
+}
+
+function validateMaxInitData(initData: string, token: string) {
+  const pairs = initData.split('&').map((item) => {
+    const separatorIndex = item.indexOf('=');
+    if (separatorIndex < 0) return [item, ''] as const;
+    return [item.slice(0, separatorIndex), item.slice(separatorIndex + 1)] as const;
+  });
+
+  const keys = new Set<string>();
+  for (const [key] of pairs) {
+    if (keys.has(key)) return null;
+    keys.add(key);
+  }
+
+  const hashPair = pairs.find(([key]) => key === 'hash');
+  if (!hashPair?.[1]) return null;
+
+  const params = new Map<string, string>();
+  for (const [key, value] of pairs) {
+    params.set(key, decodeURIComponent(value));
+  }
+
+  const authDate = Number(params.get('auth_date'));
+  const maxAgeSeconds = Number(process.env.MAX_INIT_DATA_MAX_AGE_SECONDS ?? 24 * 60 * 60);
+  if (!Number.isFinite(authDate) || authDate <= 0) return null;
+  if (Date.now() / 1000 - authDate > maxAgeSeconds) return null;
+
+  const launchParams = [...params.entries()]
+    .filter(([key]) => key !== 'hash')
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, value]) => `${key}=${value}`)
+    .join('\n');
+
+  const secretKey = createHmac('sha256', 'WebAppData').update(token).digest();
+  const expectedHash = createHmac('sha256', secretKey).update(launchParams).digest('hex');
+  const originalHash = params.get('hash') ?? '';
+  const expected = Buffer.from(expectedHash, 'hex');
+  const original = Buffer.from(originalHash, 'hex');
+  if (expected.length !== original.length || !timingSafeEqual(expected, original)) {
+    return null;
+  }
+
+  return {
+    target: getMaxSessionTarget(params),
+    authDate,
+    user: params.get('user') ? JSON.parse(params.get('user') as string) : undefined,
+    chat: params.get('chat') ? JSON.parse(params.get('chat') as string) : undefined
+  };
+}
 
 function publicError(error: unknown) {
   const maybeError = error as { statusCode?: number; message?: string };
@@ -124,6 +227,25 @@ export function buildServer(reminderRepository: ReminderRepository = createRemin
     ...(await store.getVersion()),
     commit: process.env.COMMIT_SHA ?? process.env.GIT_COMMIT ?? 'local'
   }));
+
+  app.post('/max/session', async (request, reply) => {
+    const token = readSecret('MAX_BOT_TOKEN');
+    if (!token) {
+      return reply.code(503).send({ ok: false, error: 'max_token_not_configured' });
+    }
+
+    const payload = maxSessionSchema.parse(request.body);
+    const session = validateMaxInitData(payload.initData, token);
+    if (!session) {
+      return reply.code(401).send({ ok: false, error: 'invalid_max_session' });
+    }
+
+    return {
+      ok: true,
+      target: session.target,
+      authDate: session.authDate
+    };
+  });
 
   app.get('/situations', async (request) => {
     const querySchema = z.object({ q: z.string().optional() });

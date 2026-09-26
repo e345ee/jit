@@ -81,10 +81,10 @@ function publicError(error: unknown) {
 
 function miniAppPayloadForTarget(target: { chatId?: string | number; userId?: string | number }) {
   if (target.chatId) {
-    return `chat:${target.chatId}`;
+    return `chat_${target.chatId}`;
   }
   if (target.userId) {
-    return `user:${target.userId}`;
+    return `user_${target.userId}`;
   }
   return undefined;
 }

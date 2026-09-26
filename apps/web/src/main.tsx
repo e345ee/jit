@@ -16,13 +16,27 @@ import {
   Search,
   ShieldCheck
 } from 'lucide-react';
-import { cancelReminder, createReminder, loadKnowledge, loadSituations } from './api';
+import { cancelReminder, createReminder, loadKnowledge, loadSituations, validateMaxSession } from './api';
 import type { KnowledgeCard, SituationCard, SituationStep } from './types';
 import './styles.css';
 
 type Answers = Record<string, string>;
 type View = 'routes' | 'route' | 'knowledge' | 'details';
 type ReminderByStep = Record<string, { id: string; status: 'pending' | 'sent' | 'cancelled' }>;
+type MaxLaunchState = 'checking' | 'verified' | 'blocked';
+
+declare global {
+  interface Window {
+    WebApp?: {
+      initData?: string;
+      initDataUnsafe?: {
+        start_param?: string;
+      };
+    };
+  }
+}
+
+const requireMaxLaunch = import.meta.env.VITE_REQUIRE_MAX_LAUNCH === 'true';
 
 const categories = [
   { label: 'Документы', query: 'документ' },
@@ -98,13 +112,45 @@ function stepMatches(step: SituationStep, answers: Answers) {
 function readMaxTarget() {
   if (typeof window === 'undefined') return undefined;
   const params = new URLSearchParams(window.location.search);
-  const value = params.get('maxTarget') ?? params.get('start_param') ?? params.get('payload') ?? params.get('startapp');
+  const value = params.get('maxTarget') ?? params.get('start_param') ?? params.get('payload') ?? params.get('startapp') ?? window.WebApp?.initDataUnsafe?.start_param;
   if (!value) return undefined;
   const decoded = decodeURIComponent(value);
-  return /^(chat|user):[\w:.-]+$/.test(decoded) ? decoded : undefined;
+  const match = decoded.match(/^(chat|user)[:_-]([\w.-]+)$/);
+  return match ? `${match[1]}:${match[2]}` : undefined;
+}
+
+function readMaxInitData() {
+  if (typeof window === 'undefined') return '';
+  if (window.WebApp?.initData) return window.WebApp.initData;
+
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  return hashParams.get('WebAppData') ?? '';
+}
+
+async function loadMaxBridge() {
+  if (typeof window === 'undefined' || window.WebApp) return;
+  await new Promise<void>((resolve) => {
+    const existing = document.querySelector<HTMLScriptElement>('script[data-max-bridge="true"]');
+    if (existing) {
+      existing.addEventListener('load', () => resolve(), { once: true });
+      existing.addEventListener('error', () => resolve(), { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://st.max.ru/js/max-web-app.js';
+    script.async = true;
+    script.dataset.maxBridge = 'true';
+    script.addEventListener('load', () => resolve(), { once: true });
+    script.addEventListener('error', () => resolve(), { once: true });
+    document.head.appendChild(script);
+    window.setTimeout(() => resolve(), 1800);
+  });
 }
 
 function App() {
+  const [maxLaunchState, setMaxLaunchState] = useState<MaxLaunchState>(requireMaxLaunch ? 'checking' : 'verified');
+  const [maxTarget, setMaxTarget] = useState(readMaxTarget);
   const [query, setQuery] = useState('');
   const [situations, setSituations] = useState<SituationCard[]>([]);
   const [knowledge, setKnowledge] = useState<KnowledgeCard[]>([]);
@@ -119,8 +165,34 @@ function App() {
   const [isOnline, setIsOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
   const [connectionDialogDismissed, setConnectionDialogDismissed] = useState(false);
   const [reminderState, setReminderState] = useState<'idle' | 'saving' | 'saved' | 'cancelled' | 'error'>('idle');
-  const [maxTarget] = useState(readMaxTarget);
   const [remindersByStep, setRemindersByStep] = useState<ReminderByStep>({});
+
+  useEffect(() => {
+    if (!requireMaxLaunch) return;
+    let cancelled = false;
+    loadMaxBridge().then(() => {
+      if (cancelled) return;
+      const initData = readMaxInitData();
+      if (!initData) {
+        setMaxLaunchState('blocked');
+        return;
+      }
+
+      validateMaxSession(initData)
+        .then((session) => {
+          if (cancelled) return;
+          setMaxTarget(session.target ?? readMaxTarget());
+          setMaxLaunchState('verified');
+        })
+        .catch(() => {
+          if (!cancelled) setMaxLaunchState('blocked');
+        });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     function handleOnline() {
@@ -146,6 +218,8 @@ function App() {
     setLoading(true);
     setError(null);
     setConnectionDialogDismissed(false);
+    if (maxLaunchState !== 'verified') return;
+
     Promise.all([loadSituations(query), loadKnowledge()])
       .then(([nextSituations, nextKnowledge]) => {
         if (cancelled) return;
@@ -166,7 +240,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [query, reloadKey]);
+  }, [query, reloadKey, maxLaunchState]);
 
   const selected = useMemo(
     () => situations.find((item) => item.id === selectedId) ?? situations[0] ?? null,
@@ -268,6 +342,32 @@ function App() {
         }
       : null;
   const showConnectionDialog = Boolean(connectionIssue && !connectionDialogDismissed);
+
+  if (maxLaunchState !== 'verified') {
+    return (
+      <main className="appShell gateShell">
+        <section className="gatePanel" aria-label="Открытие через MAX">
+          <div className="logoMark">
+            <MessageCircle size={26} />
+          </div>
+          {maxLaunchState === 'checking' ? (
+            <>
+              <h1>Проверяем запуск MAX</h1>
+              <p>Секунду, подтверждаем безопасный вход в mini app.</p>
+            </>
+          ) : (
+            <>
+              <h1>Откройте через MAX</h1>
+              <p>Навигатор доступен из официального бота, чтобы корректно передать чат и напоминания.</p>
+              <a className="primaryLink" href="https://max.ru/t617_hakaton_max_bot?startapp">
+                Перейти к боту
+              </a>
+            </>
+          )}
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="appShell">

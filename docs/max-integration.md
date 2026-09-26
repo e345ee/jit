@@ -9,6 +9,7 @@
 - Free text messages search the same content API as the mini app and return a short route directly in the bot.
 - The mini app URL is taken from `MINI_APP_PUBLIC_URL`.
 - Native MAX opening uses `open_app`; `MAX_MINI_APP_WEB_APP` can explicitly point to the bot public name or MAX bot link when MAX requires it.
+- Production web builds require signed MAX `initData`; direct browser opening shows an "open through MAX" screen.
 - The content API URL for bot answers is taken from `CONTENT_API_URL`, then `API_PUBLIC_URL`, then local fallback.
 
 ## Local checklist
@@ -28,6 +29,7 @@ MINI_APP_PUBLIC_URL=https://<public-web-host>
 MAX_MINI_APP_WEB_APP=<bot-public-name-or-max-link>
 API_PUBLIC_URL=https://<public-api-host>
 MAX_WEBHOOK_SECRET=<random-secret>
+VITE_REQUIRE_MAX_LAUNCH=true
 ```
 
 5. Register the webhook in MAX for the existing bot token.
@@ -49,9 +51,9 @@ The public bot URL must use HTTPS. MAX expects a fast response from the webhook,
 
 The current adapter sends one button:
 
-- `open_app` with optional `web_app = MAX_MINI_APP_WEB_APP` and `payload = chat:<id>` or `user:<id>`.
+- `open_app` with optional `web_app = MAX_MINI_APP_WEB_APP` and payload `chat_<id>` or `user_<id>`.
 
-The mini app reads MAX start parameters (`start_param`/`payload`/`startapp`) so neutral reminders keep the correct chat or user target after native opening. URL query `maxTarget` is kept only for local diagnostics and old direct links.
+The mini app loads MAX Bridge, sends `window.WebApp.initData` to `POST /max/session`, and the API validates the HMAC signature with `MAX_BOT_TOKEN`. After validation, start parameters are normalized to `chat:<id>` or `user:<id>` so neutral reminders keep the correct MAX target. URL query `maxTarget` is kept only for local diagnostics and old direct links.
 
 ## Final demo checklist
 

@@ -6,7 +6,9 @@ RUN npm install
 
 FROM deps AS build
 ARG VITE_API_URL=/api
+ARG VITE_REQUIRE_MAX_LAUNCH=false
 ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_REQUIRE_MAX_LAUNCH=$VITE_REQUIRE_MAX_LAUNCH
 COPY apps/web apps/web
 RUN npm run build -w @navigator/web
 

@@ -85,6 +85,20 @@ export async function createReminder(payload: {
   return response.json();
 }
 
+export async function validateMaxSession(initData: string): Promise<{ ok: boolean; target?: string; authDate?: number }> {
+  const response = await fetch(`${API_URL}/max/session`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ initData })
+  });
+
+  if (!response.ok) {
+    throw new Error(`MAX session failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
 export async function cancelReminder(id: string) {
   const response = await fetch(`${API_URL}/reminders/${encodeURIComponent(id)}`, {
     method: 'DELETE'
