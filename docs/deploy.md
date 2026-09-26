@@ -30,7 +30,8 @@ npm run audit:deps
 mkdir -p secrets
 printf '%s\n' "$MAX_BOT_TOKEN" > secrets/max_bot_token
 printf '%s\n' "$MAX_WEBHOOK_SECRET" > secrets/max_webhook_secret
-chmod 600 secrets/max_bot_token secrets/max_webhook_secret
+printf '%s\n' "$RUSSIAN_TRUSTED_ROOT_CA_PEM" > secrets/russian_trusted_root_ca
+chmod 600 secrets/max_bot_token secrets/max_webhook_secret secrets/russian_trusted_root_ca
 ```
 
 ## Локальный Docker smoke
@@ -54,6 +55,7 @@ SMOKE_API_URL=http://127.0.0.1:3001 npm run smoke
 
 - `MAX_BOT_TOKEN` или Docker secret `max_bot_token`.
 - `MAX_WEBHOOK_SECRET` или Docker secret `max_webhook_secret`.
+- `russian_trusted_root_ca` - CA-файл для доверия к сертификату `platform-api2.max.ru` внутри Node-контейнеров.
 - `MINI_APP_PUBLIC_URL` - только HTTPS, без плейсхолдера.
 - `MAX_MINI_APP_WEB_APP` - публичное имя или MAX-ссылка бота для нативной кнопки `open_app`, если MAX требует явную ссылку.
 - `API_PUBLIC_URL` - HTTPS адрес API, если API открыт отдельно.
@@ -82,9 +84,23 @@ Bot в `NODE_ENV=production` не стартует, если `MINI_APP_PUBLIC_UR
 6. Повторный webhook update не создает второй ответ.
 7. Mini app ищет `МРТ`, `полис`, `больничный`, `ребенок`, `переезд`, `льготы`.
 
+## CI/CD
+
+GitHub Actions workflow `.github/workflows/ci-cd.yml` выполняет build, unit/e2e tests, audit-проверки, затем деплоит `main` на сервер по SSH.
+
+Repository secrets:
+
+- `DEPLOY_HOST` - IP сервера.
+- `DEPLOY_USER` - пользователь деплоя.
+- `DEPLOY_SSH_KEY` - приватный SSH-ключ деплоя.
+- `DEPLOY_PATH` - путь проекта на сервере, например `/opt/jit`.
+- `PUBLIC_WEB_URL` - публичный HTTPS URL mini app и webhook.
+
+MAX bot token и webhook secret хранятся только на сервере в `secrets/`, а не в GitHub Secrets. После деплоя `scripts/deploy-server.sh` пересобирает контейнеры, запускает smoke-check и регистрирует MAX webhook на `${PUBLIC_WEB_URL}/webhook`.
+
 ## Что остается production-долгом
 
 - Secret manager вместо локальных файлов.
 - Централизованные логи и метрики.
 - Backup PostgreSQL.
-- Внешний reverse proxy или ingress с TLS для стабильного публичного контура.
+- Расширенный мониторинг доступности с внешним alerting.
