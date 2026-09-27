@@ -58,6 +58,7 @@ SMOKE_API_URL=http://127.0.0.1:3001 npm run smoke
 - `russian_trusted_root_ca` - CA-файл для доверия к сертификату `platform-api2.max.ru` внутри Node-контейнеров.
 - `MINI_APP_PUBLIC_URL` - только HTTPS, без плейсхолдера.
 - `MAX_MINI_APP_WEB_APP` - публичное имя или MAX-ссылка бота для нативной кнопки `open_app`, если MAX требует явную ссылку.
+- `MAX_MINI_APP_CONTACT_ID` - числовой `user_id` бота из `GET /me`; добавляется в кнопку `open_app`, чтобы MAX-клиент открывал mini app именно у текущего бота.
 - `API_PUBLIC_URL` - HTTPS адрес API, если API открыт отдельно.
 - `CORS_ORIGIN` - публичный origin mini app.
 - `COMMIT_SHA` - hash сдаваемой версии.

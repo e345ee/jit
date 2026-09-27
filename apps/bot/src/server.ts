@@ -29,6 +29,7 @@ function readSecret(name: string) {
 const token = readSecret('MAX_BOT_TOKEN');
 const miniAppUrl = process.env.MINI_APP_PUBLIC_URL ?? 'http://localhost:5173';
 const miniAppNativeRef = process.env.MAX_MINI_APP_WEB_APP;
+const miniAppContactId = process.env.MAX_MINI_APP_CONTACT_ID;
 const webhookSecret = readSecret('MAX_WEBHOOK_SECRET');
 const dedupTtlMs = Number(process.env.BOT_DEDUP_TTL_MS ?? 10 * 60 * 1000);
 const seenUpdates = new Map<string, number>();
@@ -232,6 +233,7 @@ export function buildServer() {
         await max.sendMessage({
           ...target,
           miniAppNativeRef,
+          miniAppContactId,
           miniAppPayload: miniAppPayloadForTarget(target),
           text: [
             '**Навигатор для пациента**',
@@ -262,6 +264,7 @@ export function buildServer() {
         await max.sendMessage({
           ...target,
           miniAppNativeRef,
+          miniAppContactId,
           miniAppPayload: miniAppPayloadForTarget(target),
           text: await contentAdvisor.replyTo(messageText)
         });

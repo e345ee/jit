@@ -56,7 +56,7 @@ COMPOSE_PROJECT_NAME=patient-navigator DOCKER_BUILDKIT=0 COMPOSE_DOCKER_CLI_BUIL
 - Redis: `127.0.0.1:6379`
 
 Для проверки в MAX mini app должен быть доступен по HTTPS. На локальной разработке используйте tunnel или облачный хостинг и пропишите публичные адреса в `.env`: `MINI_APP_PUBLIC_URL` и `API_PUBLIC_URL`.
-Для нативного открытия mini app в MAX можно указать `MAX_MINI_APP_WEB_APP` - публичное имя бота или MAX-ссылку, если платформа требует явный `web_app` в кнопке `open_app`.
+Для нативного открытия mini app в MAX можно указать `MAX_MINI_APP_WEB_APP` - публичное имя бота или MAX-ссылку, если платформа требует явный `web_app` в кнопке `open_app`. Если у конкурсантов нет доступа к настройкам mini app в кабинете, укажите `MAX_MINI_APP_CONTACT_ID` - числовой `user_id` бота из `GET /me`, чтобы кнопка явно ссылалась на текущего бота.
 
 ## Сценарий проверки
 

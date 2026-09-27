@@ -19,6 +19,7 @@ afterEach(() => {
   delete process.env.MAX_WEBHOOK_SECRET;
   delete process.env.MINI_APP_PUBLIC_URL;
   delete process.env.MAX_MINI_APP_WEB_APP;
+  delete process.env.MAX_MINI_APP_CONTACT_ID;
   delete process.env.CONTENT_API_URL;
 });
 
@@ -74,7 +75,8 @@ describe('max bot webhook', () => {
       MAX_BOT_TOKEN: 'token',
       MAX_WEBHOOK_SECRET: 'secret',
       MINI_APP_PUBLIC_URL: 'https://navigator.example.test',
-      MAX_MINI_APP_WEB_APP: 't617_hakaton_max_bot'
+      MAX_MINI_APP_WEB_APP: 't617_hakaton_max_bot',
+      MAX_MINI_APP_CONTACT_ID: '396690603'
     });
     const app = buildServer();
     const response = await app.inject({
@@ -96,6 +98,8 @@ describe('max bot webhook', () => {
     expect(fetchMock.mock.calls[0][1]?.body).toContain('open_app');
     expect(fetchMock.mock.calls[0][1]?.body).toContain('web_app');
     expect(fetchMock.mock.calls[0][1]?.body).toContain('t617_hakaton_max_bot');
+    expect(fetchMock.mock.calls[0][1]?.body).toContain('contact_id');
+    expect(fetchMock.mock.calls[0][1]?.body).toContain('396690603');
     expect(fetchMock.mock.calls[0][1]?.body).toContain('chat_123');
     expect(fetchMock.mock.calls[0][1]?.body).not.toContain('"link"');
     expect(fetchMock.mock.calls[0][1]?.body).not.toContain('Открыть ссылкой');

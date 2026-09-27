@@ -3,6 +3,7 @@ export interface SendMessageOptions {
   userId?: string | number;
   text: string;
   miniAppNativeRef?: string;
+  miniAppContactId?: string | number;
   miniAppPayload?: string;
 }
 
@@ -40,6 +41,7 @@ export class MaxClient {
               type: 'open_app',
               text: 'Открыть в MAX',
               ...(options.miniAppNativeRef ? { web_app: options.miniAppNativeRef } : {}),
+              ...(options.miniAppContactId ? { contact_id: Number(options.miniAppContactId) } : {}),
               ...(options.miniAppPayload ? { payload: options.miniAppPayload } : {})
             }
           ]

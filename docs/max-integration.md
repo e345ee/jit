@@ -27,6 +27,7 @@ docker compose up --build
 ```bash
 MINI_APP_PUBLIC_URL=https://<public-web-host>
 MAX_MINI_APP_WEB_APP=<bot-public-name-or-max-link>
+MAX_MINI_APP_CONTACT_ID=<bot-user-id-from-GET-me>
 API_PUBLIC_URL=https://<public-api-host>
 MAX_WEBHOOK_SECRET=<random-secret>
 VITE_REQUIRE_MAX_LAUNCH=true
@@ -52,6 +53,7 @@ The public bot URL must use HTTPS. MAX expects a fast response from the webhook,
 The current adapter sends one button:
 
 - `open_app` with `web_app = MAX_MINI_APP_WEB_APP`, because MAX rejects `open_app` payloads without a non-empty `web_app`.
+- `contact_id = MAX_MINI_APP_CONTACT_ID` when configured, so MAX clients can resolve the mini app against the current bot identity.
 - The payload is `chat_<id>` or `user_<id>` and is used only to route neutral reminders back to the correct MAX target.
 
 The mini app loads MAX Bridge, sends `window.WebApp.initData` to `POST /max/session`, and the API validates the HMAC signature with `MAX_BOT_TOKEN`. After validation, start parameters are normalized to `chat:<id>` or `user:<id>` so neutral reminders keep the correct MAX target. URL query `maxTarget` is kept only for local diagnostics and old direct links.
