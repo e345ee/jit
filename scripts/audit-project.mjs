@@ -18,7 +18,7 @@ const missingHeaders = requiredHeaders.filter((header) => !nginx.includes(header
 if (missingHeaders.length > 0) {
   throw new Error(`nginx.conf misses headers: ${missingHeaders.join(', ')}`);
 }
-if (!nginx.includes("https://*.max.ru")) {
+if (!nginx.includes('https://web.max.ru') || !nginx.includes('https://*.max.ru')) {
   throw new Error('nginx.conf should allow MAX web clients to frame the mini app');
 }
 

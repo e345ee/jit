@@ -49,9 +49,10 @@ The public bot URL must use HTTPS. MAX expects a fast response from the webhook,
 
 ## Mini app button
 
-The current adapter sends one button:
+The current adapter sends two buttons when `MAX_MINI_APP_WEB_APP` is configured:
 
-- `open_app` with optional `web_app = MAX_MINI_APP_WEB_APP` and payload `chat_<id>` or `user_<id>`.
+- `open_app` with `web_app = https://max.ru/<bot-public-name>` and payload `chat_<id>` or `user_<id>`.
+- `link` fallback to `https://max.ru/<bot-public-name>?startapp=<payload>` for clients that do not open native mini apps reliably.
 
 The mini app loads MAX Bridge, sends `window.WebApp.initData` to `POST /max/session`, and the API validates the HMAC signature with `MAX_BOT_TOKEN`. After validation, start parameters are normalized to `chat:<id>` or `user:<id>` so neutral reminders keep the correct MAX target. URL query `maxTarget` is kept only for local diagnostics and old direct links.
 
