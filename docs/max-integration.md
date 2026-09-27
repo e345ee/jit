@@ -51,7 +51,7 @@ The public bot URL must use HTTPS. MAX expects a fast response from the webhook,
 
 The current adapter sends one button:
 
-- `open_app` without a `web_app` override, so MAX opens the mini app attached to the current bot.
+- `open_app` with `web_app = MAX_MINI_APP_WEB_APP`, because MAX rejects `open_app` payloads without a non-empty `web_app`.
 - The payload is `chat_<id>` or `user_<id>` and is used only to route neutral reminders back to the correct MAX target.
 
 The mini app loads MAX Bridge, sends `window.WebApp.initData` to `POST /max/session`, and the API validates the HMAC signature with `MAX_BOT_TOKEN`. After validation, start parameters are normalized to `chat:<id>` or `user:<id>` so neutral reminders keep the correct MAX target. URL query `maxTarget` is kept only for local diagnostics and old direct links.

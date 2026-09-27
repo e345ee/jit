@@ -39,6 +39,7 @@ export class MaxClient {
             {
               type: 'open_app',
               text: 'Открыть в MAX',
+              ...(options.miniAppNativeRef ? { web_app: options.miniAppNativeRef } : {}),
               ...(options.miniAppPayload ? { payload: options.miniAppPayload } : {})
             }
           ]
