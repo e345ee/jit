@@ -18,6 +18,9 @@ const missingHeaders = requiredHeaders.filter((header) => !nginx.includes(header
 if (missingHeaders.length > 0) {
   throw new Error(`nginx.conf misses headers: ${missingHeaders.join(', ')}`);
 }
+if (!nginx.includes("https://*.max.ru")) {
+  throw new Error('nginx.conf should allow MAX web clients to frame the mini app');
+}
 
 const envExample = await readFile('.env.example', 'utf8');
 if (envExample.includes('MAX_BOT_TOKEN=') && !envExample.includes('replace_with_hackathon_token_locally')) {
