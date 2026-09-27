@@ -89,8 +89,37 @@ function miniAppPayloadForTarget(target: { chatId?: string | number; userId?: st
   return undefined;
 }
 
+type BotDiagnostics = {
+  webhookReceived: number;
+  webhookAccepted: number;
+  webhookRejected: number;
+  webhookDuplicates: number;
+  repliesSent: number;
+  replyFailures: number;
+  lastWebhookAt?: string;
+  lastAcceptedAt?: string;
+  lastRejectedAt?: string;
+  lastReplySentAt?: string;
+  lastReplyFailureAt?: string;
+  lastUpdateType?: string;
+  lastTargetType?: 'chat' | 'user';
+  lastError?: string;
+};
+
+function isoNow() {
+  return new Date().toISOString();
+}
+
 export function buildServer() {
   validateStartupConfig();
+  const diagnostics: BotDiagnostics = {
+    webhookReceived: 0,
+    webhookAccepted: 0,
+    webhookRejected: 0,
+    webhookDuplicates: 0,
+    repliesSent: 0,
+    replyFailures: 0
+  };
 
   const app = Fastify({
     bodyLimit: 64 * 1024,
@@ -112,6 +141,11 @@ export function buildServer() {
 
   app.setErrorHandler((error, request, reply) => {
     request.log.warn({ err: error }, 'bot request failed');
+    if (request.url.startsWith('/webhook')) {
+      diagnostics.webhookRejected += 1;
+      diagnostics.lastRejectedAt = isoNow();
+      diagnostics.lastError = error instanceof z.ZodError ? 'validation_error' : publicError(error).message;
+    }
     if (error instanceof z.ZodError) {
       reply.code(400).send({ error: 'validation_error', issues: error.issues });
       return;
@@ -128,7 +162,8 @@ export function buildServer() {
   app.get('/health', async () => ({
     status: 'ok',
     service: 'navigator-bot',
-    maxTokenConfigured: Boolean(token)
+    maxTokenConfigured: Boolean(token),
+    diagnostics
   }));
 
   app.get('/me', async (request, reply) => {
@@ -139,9 +174,14 @@ export function buildServer() {
   });
 
   app.post('/webhook', async (request, reply) => {
+    diagnostics.webhookReceived += 1;
+    diagnostics.lastWebhookAt = isoNow();
     if (webhookSecret) {
       const receivedSecret = request.headers['x-max-bot-api-secret'];
       if (receivedSecret !== webhookSecret) {
+        diagnostics.webhookRejected += 1;
+        diagnostics.lastRejectedAt = isoNow();
+        diagnostics.lastError = 'invalid_webhook_secret';
         request.log.warn('rejected webhook with invalid secret');
         return reply.code(401).send({ error: 'invalid_webhook_secret' });
       }
@@ -150,11 +190,16 @@ export function buildServer() {
     const update = maxUpdateSchema.parse(request.body);
     const dedupKey = getUpdateDedupKey(update);
     if (hasSeenUpdate(dedupKey)) {
+      diagnostics.webhookDuplicates += 1;
       request.log.info({ dedupKey }, 'duplicate webhook update ignored');
       return { ok: true, duplicate: true };
     }
 
     if (!max) {
+      diagnostics.webhookAccepted += 1;
+      diagnostics.lastAcceptedAt = isoNow();
+      diagnostics.lastUpdateType = update.update_type;
+      diagnostics.lastError = 'missing_token';
       request.log.warn('MAX_BOT_TOKEN is not configured; update accepted but no reply sent');
       rememberUpdate(dedupKey);
       return { ok: true, skipped: 'missing_token' };
@@ -162,8 +207,16 @@ export function buildServer() {
 
     const target = getChatTarget(update);
     if (!target.chatId && !target.userId) {
+      diagnostics.webhookRejected += 1;
+      diagnostics.lastRejectedAt = isoNow();
+      diagnostics.lastUpdateType = update.update_type;
+      diagnostics.lastError = 'chat_or_user_id_required';
       return reply.code(400).send({ error: 'chat_or_user_id_required' });
     }
+    diagnostics.webhookAccepted += 1;
+    diagnostics.lastAcceptedAt = isoNow();
+    diagnostics.lastUpdateType = update.update_type;
+    diagnostics.lastTargetType = target.chatId ? 'chat' : 'user';
     request.log.info(
       {
         updateType: update.update_type,
@@ -175,32 +228,52 @@ export function buildServer() {
     );
 
     if (shouldWelcome(update)) {
-      await max.sendMessage({
-        ...target,
-        miniAppNativeRef,
-        miniAppPayload: miniAppPayloadForTarget(target),
-        text: [
-          '**Навигатор для пациента**',
-          '',
-          'Помогу быстро собрать шаги, документы и сроки для медицинского маршрута.',
-          'Напишите прямо в чат: МРТ, МСЭ, вычет, госпитализация или льготные лекарства.',
-          'Для подробного маршрута откройте mini app.',
-          '',
-          'Я не ставлю диагнозы и не заменяю врача.'
-        ].join('\n')
-      });
+      try {
+        await max.sendMessage({
+          ...target,
+          miniAppNativeRef,
+          miniAppPayload: miniAppPayloadForTarget(target),
+          text: [
+            '**Навигатор для пациента**',
+            '',
+            'Помогу быстро собрать шаги, документы и сроки для медицинского маршрута.',
+            'Напишите прямо в чат: МРТ, МСЭ, вычет, госпитализация или льготные лекарства.',
+            'Для подробного маршрута откройте mini app.',
+            '',
+            'Я не ставлю диагнозы и не заменяю врача.'
+          ].join('\n')
+        });
+        diagnostics.repliesSent += 1;
+        diagnostics.lastReplySentAt = isoNow();
+        delete diagnostics.lastError;
+      } catch (error) {
+        diagnostics.replyFailures += 1;
+        diagnostics.lastReplyFailureAt = isoNow();
+        diagnostics.lastError = publicError(error).message;
+        throw error;
+      }
       rememberUpdate(dedupKey);
       return { ok: true };
     }
 
     const messageText = getMessageText(update);
     if (messageText) {
-      await max.sendMessage({
-        ...target,
-        miniAppNativeRef,
-        miniAppPayload: miniAppPayloadForTarget(target),
-        text: await contentAdvisor.replyTo(messageText)
-      });
+      try {
+        await max.sendMessage({
+          ...target,
+          miniAppNativeRef,
+          miniAppPayload: miniAppPayloadForTarget(target),
+          text: await contentAdvisor.replyTo(messageText)
+        });
+        diagnostics.repliesSent += 1;
+        diagnostics.lastReplySentAt = isoNow();
+        delete diagnostics.lastError;
+      } catch (error) {
+        diagnostics.replyFailures += 1;
+        diagnostics.lastReplyFailureAt = isoNow();
+        diagnostics.lastError = publicError(error).message;
+        throw error;
+      }
     }
 
     rememberUpdate(dedupKey);
