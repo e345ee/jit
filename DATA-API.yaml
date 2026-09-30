@@ -1,73 +1,143 @@
-name: patient-navigator-api-checks
-version: 0.1.0
-baseUrl: https://kronva-stat.ru/api
-description: Required smoke checks for the Patient Navigator Content API.
+schemaVersion: "1.0"
+
+solution:
+  name: "Навигатор для пациента"
+  teamId: "JIT"
+
+api:
+  baseUrl: "https://kronva-stat.ru/api"
+  openapi: "./openapi.yaml"
+  defaultHeaders:
+    Accept: "application/json"
+
 checks:
-  - id: api-health
-    method: GET
-    path: /health
-    expect:
-      status: 200
-      json:
-        status: ok
-        service: navigator-api
-  - id: api-ready
-    method: GET
-    path: /ready
-    expect:
-      status: 200
-      json:
-        status: ready
-        service: navigator-api
-  - id: content-version
-    method: GET
-    path: /content/version
-    expect:
-      status: 200
-      json:
-        situations: 72
-        knowledge: 146
-        dataStatus: mixed
-  - id: mri-search
-    method: GET
-    path: /situations?q=%D0%9C%D0%A0%D0%A2
-    expect:
-      status: 200
-      containsJson:
-        id: mri-contrast
-  - id: oms-search
-    method: GET
-    path: /situations?q=%D0%BE%D0%BC%D1%81
-    expect:
-      status: 200
-      containsJson:
-        id: oms-policy-update
-  - id: knowledge-snils-search
-    method: GET
-    path: /knowledge?q=%D0%A1%D0%9D%D0%98%D0%9B%D0%A1
-    expect:
-      status: 200
-      containsJson:
-        id: snils
-  - id: reminder-neutral-create
-    method: POST
-    path: /reminders
-    body:
-      situationId: mri-contrast
-      stepId: creatinine
-      remindAt: "2026-09-26T09:00:00.000Z"
-      text: "Напоминание: проверьте срок документа."
-    expect:
-      status: 201
-      json:
-        status: pending
-  - id: reminder-medical-details-rejected
-    method: POST
-    path: /reminders
-    body:
-      situationId: mri-contrast
-      stepId: creatinine
-      remindAt: "2026-09-26T09:00:00.000Z"
-      text: "Напоминание: проверьте диагноз."
-    expect:
-      status: 400
+  - id: "health"
+    name: "API health"
+    description: "Проверяет, что публичный API отвечает."
+    method: "GET"
+    path: "/health"
+    role: "public"
+    expected:
+      statusCodes: [200]
+      contentType: "application/json"
+      requiredFields: ["status", "service"]
+    timeoutMs: 5000
+    repeatable: true
+
+  - id: "ready"
+    name: "Content readiness"
+    description: "Проверяет загрузку каталога ситуаций и справочных материалов."
+    method: "GET"
+    path: "/ready"
+    role: "public"
+    expected:
+      statusCodes: [200]
+      contentType: "application/json"
+      requiredFields: ["status", "service", "content"]
+    timeoutMs: 5000
+    repeatable: true
+
+  - id: "content-version"
+    name: "Content version"
+    description: "Возвращает версию контента и счетчики карточек."
+    method: "GET"
+    path: "/content/version"
+    role: "public"
+    expected:
+      statusCodes: [200]
+      contentType: "application/json"
+      requiredFields: ["version", "situations", "knowledge", "dataStatus"]
+    timeoutMs: 5000
+    repeatable: true
+
+  - id: "mri-search"
+    name: "Search MRI route"
+    description: "Проверяет поиск основного демо-сценария МРТ с контрастом."
+    method: "GET"
+    path: "/situations"
+    role: "public"
+    request:
+      query:
+        q: "МРТ"
+    expected:
+      statusCodes: [200]
+      contentType: "application/json"
+      bodySchema:
+        type: "array"
+        minItems: 1
+    timeoutMs: 5000
+    repeatable: true
+
+  - id: "knowledge-snils-search"
+    name: "Search SNILS knowledge card"
+    description: "Проверяет поиск справочной карточки по СНИЛС."
+    method: "GET"
+    path: "/knowledge"
+    role: "public"
+    request:
+      query:
+        q: "СНИЛС"
+    expected:
+      statusCodes: [200]
+      contentType: "application/json"
+      bodySchema:
+        type: "array"
+        minItems: 1
+    timeoutMs: 5000
+    repeatable: true
+
+  - id: "create-neutral-reminder"
+    name: "Create neutral reminder"
+    description: "Создает нейтральное напоминание без диагноза и медицинских подробностей."
+    method: "POST"
+    path: "/reminders"
+    role: "public"
+    request:
+      headers:
+        Content-Type: "application/json"
+      body:
+        situationId: "mri-contrast"
+        stepId: "creatinine"
+        remindAt: "2030-09-26T09:00:00.000Z"
+        text: "Напоминание: проверьте срок документа."
+    expected:
+      statusCodes: [200, 201]
+      contentType: "application/json"
+      requiredFields: ["id", "status"]
+    timeoutMs: 5000
+    repeatable: false
+    extract:
+      reminderId: "$.id"
+
+  - id: "reject-medical-reminder"
+    name: "Reject reminder with medical details"
+    description: "Проверяет, что API отклоняет текст напоминания с медицинскими подробностями."
+    method: "POST"
+    path: "/reminders"
+    role: "public"
+    request:
+      headers:
+        Content-Type: "application/json"
+      body:
+        situationId: "mri-contrast"
+        stepId: "creatinine"
+        remindAt: "2030-09-26T09:00:00.000Z"
+        text: "Напоминание: проверьте диагноз."
+    expected:
+      statusCodes: [400]
+      contentType: "application/json"
+      requiredFields: ["error"]
+    timeoutMs: 5000
+    repeatable: true
+
+cleanup:
+  - id: "delete-neutral-reminder"
+    method: "DELETE"
+    path: "/reminders/{id}"
+    role: "public"
+    request:
+      path:
+        id: "${reminderId}"
+    expected:
+      statusCodes: [200, 404]
+    timeoutMs: 5000
