@@ -1,6 +1,6 @@
 name: patient-navigator-api-checks
 version: 0.1.0
-baseUrl: http://localhost:3001
+baseUrl: https://kronva-stat.ru/api
 description: Required smoke checks for the Patient Navigator Content API.
 checks:
   - id: api-health

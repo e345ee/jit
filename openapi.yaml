@@ -4,6 +4,8 @@ info:
   version: 0.1.0
   description: Content and neutral reminder API for the MAX patient navigator.
 servers:
+  - url: https://kronva-stat.ru/api
+    description: Production API
   - url: http://localhost:3001
     description: Local development API
 paths:

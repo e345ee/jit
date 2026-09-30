@@ -24,6 +24,11 @@ const banned = [
     id: 'generic-ai-transition',
     pattern: /важно отметить|следует отметить|стоит отметить|in today'?s rapidly evolving landscape/i,
     message: 'Remove generic transition filler.'
+  },
+  {
+    id: 'generic-ai-claim',
+    pattern: /в современном мире|играет ключевую роль|комплексн(?:ый|ого)? подход|инновационн|уникальн|бесшовн/i,
+    message: 'Replace generic AI-style claims with a concrete fact, scenario or metric.'
   }
 ];
 

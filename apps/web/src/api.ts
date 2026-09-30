@@ -18,7 +18,7 @@ function writeCache<T>(cacheKey: string | undefined, value: T) {
   try {
     localStorage.setItem(cacheKey, JSON.stringify(value));
   } catch {
-    // Cache is best-effort only.
+    return;
   }
 }
 
